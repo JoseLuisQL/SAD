@@ -1,0 +1,671 @@
+{
+  "$schema": "https://json.schemastore.org/design-tokens.json",
+  "version": "1.0.0",
+  "description": "Design Tokens para el Módulo de Archivo Digital - Sistema Integrado de Archivos Digitales (SAD)",
+  "reference": "frontend/design/archivo-digital-style-guide.md",
+  "colors": {
+    "primary": {
+      "value": "oklch(0.205 0 0)",
+      "hex": "#1A1A1A",
+      "description": "Color principal (Negro profundo)",
+      "usage": "Textos destacados, iconos primarios"
+    },
+    "background": {
+      "value": "oklch(1 0 0)",
+      "hex": "#FFFFFF",
+      "description": "Fondo principal (Blanco puro)",
+      "usage": "Fondo de páginas, Cards"
+    },
+    "foreground": {
+      "value": "oklch(0.145 0 0)",
+      "hex": "#252525",
+      "description": "Color de texto principal (Gris oscuro)",
+      "usage": "Texto de párrafos, labels"
+    },
+    "muted": {
+      "value": "oklch(0.97 0 0)",
+      "hex": "#F9FAFB",
+      "description": "Fondo atenuado (Gris 50)",
+      "usage": "Headers de tablas, fondos secundarios"
+    },
+    "border": {
+      "value": "oklch(0.922 0 0)",
+      "hex": "#E5E7EB",
+      "description": "Color de bordes (Gris 200)",
+      "usage": "Bordes de Cards, Inputs, Tablas"
+    },
+    "text": {
+      "primary": {
+        "value": "#111827",
+        "class": "text-gray-900",
+        "description": "Texto principal oscuro"
+      },
+      "secondary": {
+        "value": "#4B5563",
+        "class": "text-gray-600",
+        "description": "Texto secundario"
+      },
+      "tertiary": {
+        "value": "#6B7280",
+        "class": "text-gray-500",
+        "description": "Texto terciario/muted"
+      },
+      "disabled": {
+        "value": "#9CA3AF",
+        "class": "text-gray-400",
+        "description": "Texto deshabilitado"
+      }
+    },
+    "semantic": {
+      "success": {
+        "base": {
+          "value": "#10B981",
+          "class": "bg-green-500",
+          "description": "Verde para estados exitosos"
+        },
+        "light": {
+          "value": "#D1FAE5",
+          "class": "bg-green-100",
+          "description": "Fondo verde claro"
+        },
+        "dark": {
+          "value": "#047857",
+          "class": "bg-green-700",
+          "description": "Verde oscuro para hover"
+        },
+        "foreground": {
+          "value": "#FFFFFF",
+          "class": "text-white",
+          "description": "Texto sobre fondo verde"
+        }
+      },
+      "warning": {
+        "base": {
+          "value": "#F59E0B",
+          "class": "bg-amber-500",
+          "description": "Ámbar para advertencias"
+        },
+        "light": {
+          "value": "#FEF3C7",
+          "class": "bg-amber-100",
+          "description": "Fondo ámbar claro"
+        },
+        "dark": {
+          "value": "#D97706",
+          "class": "bg-amber-700",
+          "description": "Ámbar oscuro para hover"
+        },
+        "foreground": {
+          "value": "#FFFFFF",
+          "class": "text-white",
+          "description": "Texto sobre fondo ámbar"
+        }
+      },
+      "error": {
+        "base": {
+          "value": "oklch(0.577 0.245 27.325)",
+          "hex": "#DC2626",
+          "class": "bg-red-600",
+          "description": "Rojo para errores"
+        },
+        "light": {
+          "value": "#FEE2E2",
+          "class": "bg-red-100",
+          "description": "Fondo rojo claro"
+        },
+        "dark": {
+          "value": "#991B1B",
+          "class": "bg-red-800",
+          "description": "Rojo oscuro para hover"
+        },
+        "foreground": {
+          "value": "#FFFFFF",
+          "class": "text-white",
+          "description": "Texto sobre fondo rojo"
+        }
+      },
+      "info": {
+        "base": {
+          "value": "#2563EB",
+          "class": "bg-blue-600",
+          "description": "Azul para información"
+        },
+        "light": {
+          "value": "#DBEAFE",
+          "class": "bg-blue-100",
+          "description": "Fondo azul claro"
+        },
+        "dark": {
+          "value": "#1E40AF",
+          "class": "bg-blue-800",
+          "description": "Azul oscuro para hover"
+        },
+        "foreground": {
+          "value": "#FFFFFF",
+          "class": "text-white",
+          "description": "Texto sobre fondo azul"
+        }
+      },
+      "neutral": {
+        "base": {
+          "value": "#E5E7EB",
+          "class": "bg-gray-200",
+          "description": "Gris para estados neutrales"
+        },
+        "light": {
+          "value": "#F9FAFB",
+          "class": "bg-gray-50",
+          "description": "Fondo gris muy claro"
+        },
+        "dark": {
+          "value": "#D1D5DB",
+          "class": "bg-gray-300",
+          "description": "Gris oscuro para hover"
+        },
+        "foreground": {
+          "value": "#374151",
+          "class": "text-gray-700",
+          "description": "Texto sobre fondo gris"
+        }
+      }
+    },
+    "accents": {
+      "blue": {
+        "background": {
+          "value": "#EFF6FF",
+          "class": "bg-blue-50"
+        },
+        "foreground": {
+          "value": "#2563EB",
+          "class": "text-blue-600"
+        },
+        "usage": "Iconos de métricas generales, documentos"
+      },
+      "green": {
+        "background": {
+          "value": "#F0FDF4",
+          "class": "bg-green-50"
+        },
+        "foreground": {
+          "value": "#16A34A",
+          "class": "text-green-600"
+        },
+        "usage": "Iconos de métricas positivas, completados"
+      },
+      "amber": {
+        "background": {
+          "value": "#FFFBEB",
+          "class": "bg-amber-50"
+        },
+        "foreground": {
+          "value": "#D97706",
+          "class": "text-amber-600"
+        },
+        "usage": "Iconos de advertencias, pendientes"
+      },
+      "red": {
+        "background": {
+          "value": "#FEF2F2",
+          "class": "bg-red-50"
+        },
+        "foreground": {
+          "value": "#DC2626",
+          "class": "text-red-600"
+        },
+        "usage": "Iconos de errores, críticos"
+      },
+      "violet": {
+        "background": {
+          "value": "#F5F3FF",
+          "class": "bg-violet-50"
+        },
+        "foreground": {
+          "value": "#7C3AED",
+          "class": "text-violet-600"
+        },
+        "usage": "Iconos de datos analíticos, contadores"
+      }
+    }
+  },
+  "typography": {
+    "fontFamily": {
+      "sans": "ui-sans-serif, system-ui, sans-serif",
+      "description": "Font family principal (Inter/Roboto del sistema)"
+    },
+    "fontSize": {
+      "xs": {
+        "value": "0.75rem",
+        "pixels": "12px",
+        "lineHeight": "1rem",
+        "class": "text-xs",
+        "usage": "Captions, metadata, small badges"
+      },
+      "sm": {
+        "value": "0.875rem",
+        "pixels": "14px",
+        "lineHeight": "1.25rem",
+        "class": "text-sm",
+        "usage": "Texto secundario, labels, botones pequeños"
+      },
+      "base": {
+        "value": "1rem",
+        "pixels": "16px",
+        "lineHeight": "1.5rem",
+        "class": "text-base",
+        "usage": "Texto de párrafo estándar"
+      },
+      "lg": {
+        "value": "1.125rem",
+        "pixels": "18px",
+        "lineHeight": "1.75rem",
+        "class": "text-lg",
+        "usage": "Subtítulos, texto destacado"
+      },
+      "xl": {
+        "value": "1.25rem",
+        "pixels": "20px",
+        "lineHeight": "1.75rem",
+        "class": "text-xl",
+        "usage": "Títulos de Cards"
+      },
+      "2xl": {
+        "value": "1.5rem",
+        "pixels": "24px",
+        "lineHeight": "2rem",
+        "class": "text-2xl",
+        "usage": "H3"
+      },
+      "3xl": {
+        "value": "1.875rem",
+        "pixels": "30px",
+        "lineHeight": "2.25rem",
+        "class": "text-3xl",
+        "usage": "H2"
+      },
+      "4xl": {
+        "value": "2.25rem",
+        "pixels": "36px",
+        "lineHeight": "2.5rem",
+        "class": "text-4xl",
+        "usage": "H1 principal de página"
+      }
+    },
+    "fontWeight": {
+      "regular": {
+        "value": "400",
+        "class": "font-normal",
+        "usage": "Texto de párrafo, descripciones"
+      },
+      "medium": {
+        "value": "500",
+        "class": "font-medium",
+        "usage": "Labels, botones, TableCell primario"
+      },
+      "semibold": {
+        "value": "600",
+        "class": "font-semibold",
+        "usage": "H3, subtítulos, nombres en tablas"
+      },
+      "bold": {
+        "value": "700",
+        "class": "font-bold",
+        "usage": "H1, H2, valores numéricos destacados"
+      }
+    }
+  },
+  "spacing": {
+    "0": {
+      "value": "0px",
+      "class": "0"
+    },
+    "1": {
+      "value": "0.25rem",
+      "pixels": "4px",
+      "class": "1"
+    },
+    "2": {
+      "value": "0.5rem",
+      "pixels": "8px",
+      "class": "2",
+      "usage": "Gap entre badges inline, spacing micro"
+    },
+    "3": {
+      "value": "0.75rem",
+      "pixels": "12px",
+      "class": "3"
+    },
+    "4": {
+      "value": "1rem",
+      "pixels": "16px",
+      "class": "4",
+      "usage": "Spacing dentro de formularios, gap en grids secundarios"
+    },
+    "6": {
+      "value": "1.5rem",
+      "pixels": "24px",
+      "class": "6",
+      "usage": "Spacing entre secciones, padding de Cards principales, gap en grids"
+    },
+    "8": {
+      "value": "2rem",
+      "pixels": "32px",
+      "class": "8"
+    },
+    "sections": {
+      "macro": {
+        "value": "1.5rem",
+        "pixels": "24px",
+        "class": "space-y-6",
+        "usage": "Entre secciones de página (Header → Filtros → Tabla)"
+      },
+      "medium": {
+        "value": "1rem",
+        "pixels": "16px",
+        "class": "space-y-4",
+        "usage": "Dentro de formularios, entre grupos de campos"
+      },
+      "micro": {
+        "value": "0.5rem",
+        "pixels": "8px",
+        "class": "space-y-2",
+        "usage": "Entre label e input, entre badges"
+      }
+    }
+  },
+  "borderRadius": {
+    "base": {
+      "value": "0.625rem",
+      "pixels": "10px",
+      "class": "rounded-lg",
+      "cssVar": "--radius",
+      "usage": "Cards, Modals"
+    },
+    "sm": {
+      "value": "calc(var(--radius) - 4px)",
+      "pixels": "6px",
+      "class": "rounded",
+      "usage": "Badges, Buttons pequeños"
+    },
+    "md": {
+      "value": "calc(var(--radius) - 2px)",
+      "pixels": "8px",
+      "class": "rounded-md",
+      "usage": "Inputs, Selects, contenedores pequeños"
+    },
+    "lg": {
+      "value": "var(--radius)",
+      "pixels": "10px",
+      "class": "rounded-lg",
+      "usage": "Cards, Modals"
+    },
+    "xl": {
+      "value": "calc(var(--radius) + 4px)",
+      "pixels": "14px",
+      "class": "rounded-xl",
+      "usage": "Modals grandes"
+    },
+    "full": {
+      "value": "9999px",
+      "class": "rounded-full",
+      "usage": "Avatars, iconos circulares"
+    }
+  },
+  "borders": {
+    "width": {
+      "default": {
+        "value": "1px",
+        "class": "border",
+        "usage": "Bordes estándar de Cards, Inputs"
+      },
+      "thick": {
+        "value": "2px",
+        "class": "border-2",
+        "usage": "Focus states, outline de accesibilidad"
+      }
+    },
+    "colors": {
+      "default": {
+        "value": "#E5E7EB",
+        "class": "border-gray-200",
+        "usage": "Bordes de Cards y contenedores"
+      },
+      "input": {
+        "value": "#D1D5DB",
+        "class": "border-gray-300",
+        "usage": "Inputs, selects"
+      },
+      "focus": {
+        "value": "#2563EB",
+        "class": "border-blue-600",
+        "usage": "Focus visible para accesibilidad"
+      },
+      "error": {
+        "value": "#DC2626",
+        "class": "border-red-600",
+        "usage": "Error states en formularios"
+      }
+    }
+  },
+  "shadows": {
+    "recommendation": "Preferir borders sobre shadows para mantener estilo minimalista",
+    "sm": {
+      "value": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+      "class": "shadow-sm",
+      "usage": "Hover sutil opcional en Cards"
+    },
+    "md": {
+      "value": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+      "class": "shadow-md",
+      "usage": "Dropdown menus, popovers"
+    },
+    "lg": {
+      "value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+      "class": "shadow-lg",
+      "usage": "Modals, overlays"
+    }
+  },
+  "transitions": {
+    "duration": {
+      "fast": {
+        "value": "150ms",
+        "class": "duration-150",
+        "usage": "Microinteracciones rápidas"
+      },
+      "default": {
+        "value": "200ms",
+        "class": "duration-200",
+        "usage": "Predeterminado para hover, focus"
+      },
+      "slow": {
+        "value": "300ms",
+        "class": "duration-300",
+        "usage": "Animaciones más perceptibles"
+      }
+    },
+    "properties": {
+      "colors": {
+        "class": "transition-colors",
+        "usage": "Cambios de color (hover, focus)"
+      },
+      "shadow": {
+        "class": "transition-shadow",
+        "usage": "Elevaciones (hover en Cards)"
+      },
+      "all": {
+        "class": "transition-all",
+        "usage": "Efectos complejos (scales, múltiples props)"
+      }
+    },
+    "timingFunction": {
+      "value": "ease-in-out",
+      "description": "Predeterminado de Tailwind"
+    }
+  },
+  "components": {
+    "card": {
+      "primary": {
+        "classes": "bg-white p-6 rounded-lg border border-gray-200",
+        "usage": "Cards principales de contenido"
+      },
+      "secondary": {
+        "classes": "bg-white p-4 rounded-lg border border-gray-200",
+        "usage": "Cards anidadas o secundarias"
+      },
+      "interactive": {
+        "classes": "bg-white p-6 rounded-lg border border-gray-200 hover:bg-gray-50 hover:shadow-sm transition-all duration-200 cursor-pointer",
+        "usage": "Cards clicables"
+      }
+    },
+    "table": {
+      "wrapper": {
+        "classes": "bg-white rounded-lg border border-gray-200",
+        "usage": "Contenedor de tabla"
+      },
+      "header": {
+        "classes": "bg-gray-50 text-xs font-medium text-gray-500 uppercase tracking-wider",
+        "usage": "TableHead estilizado"
+      },
+      "cell": {
+        "primary": {
+          "classes": "font-medium",
+          "usage": "Celda con dato principal"
+        },
+        "secondary": {
+          "classes": "text-gray-600 text-sm",
+          "usage": "Celda con metadata"
+        }
+      },
+      "emptyState": {
+        "classes": "text-center py-12 bg-gray-50 rounded-lg border border-gray-200",
+        "usage": "Estado vacío de tabla"
+      }
+    },
+    "dialog": {
+      "small": {
+        "classes": "max-w-md",
+        "usage": "Confirmaciones, alertas"
+      },
+      "medium": {
+        "classes": "max-w-2xl",
+        "usage": "Formularios estándar"
+      },
+      "large": {
+        "classes": "max-w-4xl max-h-[80vh] overflow-y-auto",
+        "usage": "Vistas de detalle"
+      },
+      "extraLarge": {
+        "classes": "max-w-6xl max-h-[90vh] overflow-hidden flex flex-col",
+        "usage": "Interacciones complejas"
+      }
+    },
+    "badge": {
+      "sizes": {
+        "sm": {
+          "classes": "text-xs px-2 py-0.5",
+          "iconSize": "h-3 w-3"
+        },
+        "md": {
+          "classes": "text-sm px-2.5 py-1",
+          "iconSize": "h-4 w-4"
+        },
+        "lg": {
+          "classes": "text-base px-3 py-1.5",
+          "iconSize": "h-5 w-5"
+        }
+      },
+      "variants": {
+        "success": "bg-green-500 text-white hover:bg-green-600",
+        "warning": "bg-yellow-500 text-white hover:bg-yellow-600",
+        "error": "bg-red-500 text-white hover:bg-red-600",
+        "info": "bg-blue-500 text-white hover:bg-blue-600",
+        "neutral": "bg-gray-200 text-gray-700 hover:bg-gray-300",
+        "outline": "border border-gray-300 text-gray-700"
+      }
+    },
+    "button": {
+      "sizes": {
+        "sm": "px-3 text-xs",
+        "default": "px-4 py-2",
+        "lg": "px-8 text-base",
+        "icon": "h-10 w-10"
+      },
+      "variants": {
+        "primary": "bg-primary text-primary-foreground hover:bg-primary/90",
+        "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        "outline": "border border-input bg-background hover:bg-accent",
+        "ghost": "hover:bg-accent hover:text-accent-foreground",
+        "destructive": "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        "link": "text-primary underline-offset-4 hover:underline"
+      }
+    }
+  },
+  "layout": {
+    "pageStructure": {
+      "verticalSpacing": "space-y-6",
+      "description": "Estructura de página con espaciado consistente entre secciones"
+    },
+    "grids": {
+      "metrics": {
+        "classes": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6",
+        "usage": "Grid de Cards de métricas (4 columnas)"
+      },
+      "content": {
+        "classes": "grid grid-cols-1 lg:grid-cols-2 gap-6",
+        "usage": "Grid de contenido (2 columnas)"
+      },
+      "filters": {
+        "classes": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4",
+        "usage": "Grid de filtros o campos de formulario"
+      }
+    },
+    "breakpoints": {
+      "sm": "640px",
+      "md": "768px",
+      "lg": "1024px",
+      "xl": "1280px",
+      "2xl": "1536px"
+    }
+  },
+  "accessibility": {
+    "contrast": {
+      "wcag": "WCAG 2.1 AA",
+      "minimumRatio": {
+        "normalText": "4.5:1",
+        "largeText": "3:1",
+        "uiElements": "3:1"
+      },
+      "validated": [
+        {
+          "foreground": "text-gray-900",
+          "background": "bg-white",
+          "ratio": "16.1:1",
+          "status": "AAA"
+        },
+        {
+          "foreground": "text-gray-600",
+          "background": "bg-white",
+          "ratio": "7.0:1",
+          "status": "AAA"
+        },
+        {
+          "foreground": "text-gray-500",
+          "background": "bg-white",
+          "ratio": "4.6:1",
+          "status": "AA"
+        }
+      ]
+    },
+    "focusStates": {
+      "default": "focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2",
+      "description": "Focus visible para navegación por teclado"
+    },
+    "ariaLabels": {
+      "required": [
+        "Todos los inputs tienen <Label> con htmlFor",
+        "Botones de iconos tienen aria-label",
+        "Tablas tienen aria-label descriptivo",
+        "Modals tienen aria-labelledby y aria-describedby"
+      ]
+    }
+  }
+}

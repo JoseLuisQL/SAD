@@ -1,0 +1,406 @@
+import prisma from '../config/database';
+import * as emailService from './notification.service';
+
+interface CreateNotificationParams {
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  data?: any;
+  priority?: string;
+  actionUrl?: string;
+  actionLabel?: string;
+  expiresAt?: Date;
+}
+
+interface GetNotificationsFilters {
+  isRead?: boolean;
+  type?: string;
+  priority?: string;
+  dateFrom?: Date;
+  page?: number;
+  limit?: number;
+}
+
+export const createNotification = async (params: CreateNotificationParams) => {
+  const {
+    userId,
+    type,
+    title,
+    message,
+    data,
+    priority = 'NORMAL',
+    actionUrl,
+    actionLabel,
+    expiresAt
+  } = params;
+
+  const notification = await prisma.notification.create({
+    data: {
+      userId,
+      type,
+      title,
+      message,
+      data: data || null,
+      priority,
+      actionUrl,
+      actionLabel,
+      expiresAt
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          firstName: true,
+          lastName: true
+        }
+      }
+    }
+  });
+
+  if (priority === 'URGENT') {
+    try {
+      await emailService.sendEmail({
+        to: notification.user.email,
+        subject: `🚨 ${title}`,
+        body: message
+      });
+    } catch (error) {
+      console.error('Error enviando email de notificación urgente:', error);
+    }
+  }
+
+  return notification;
+};
+
+export const createSignaturePendingNotification = async (
+  userId: string,
+  documentId: string,
+  documentName: string
+) => {
+  return createNotification({
+    userId,
+    type: 'SIGNATURE_PENDING',
+    title: 'Documento pendiente de firma',
+    message: `Tienes un documento pendiente de firma: ${documentName}`,
+    data: { documentId, documentName },
+    priority: 'HIGH',
+    actionUrl: `/dashboard/firma/firmar?documentId=${documentId}`,
+    actionLabel: 'Firmar Ahora'
+  });
+};
+
+export const createFlowAdvanceNotification = async (
+  userId: string,
+  flowId: string,
+  flowName: string,
+  documentName: string,
+  documentId?: string
+) => {
+  // Si tenemos documentId, redirigir directamente a la página de firma
+  const actionUrl = documentId 
+    ? `/dashboard/firma/firmar?documentId=${documentId}&flowId=${flowId}`
+    : `/dashboard/firma/flujos`;
+
+  return createNotification({
+    userId,
+    type: 'FLOW_STARTED',
+    title: 'Es tu turno en el flujo de firma',
+    message: `Es tu turno para firmar el documento "${documentName}" en el flujo "${flowName}"`,
+    data: { flowId, flowName, documentName, documentId },
+    priority: 'HIGH',
+    actionUrl,
+    actionLabel: 'Firmar Ahora'
+  });
+};
+
+export const createSignatureCompletedNotification = async (
+  userIds: string[],
+  documentId: string,
+  documentName: string,
+  signerName: string
+) => {
+  const notifications = await Promise.all(
+    userIds.map(userId =>
+      createNotification({
+        userId,
+        type: 'SIGNATURE_COMPLETED',
+        title: 'Firma completada',
+        message: `${signerName} ha firmado el documento "${documentName}"`,
+        data: { documentId, documentName, signerName },
+        priority: 'NORMAL',
+        actionUrl: `/dashboard/archivo/documentos/${documentId}`,
+        actionLabel: 'Ver Documento'
+      })
+    )
+  );
+
+  return notifications;
+};
+
+export const createSignatureRevertedNotification = async (
+  userIds: string[],
+  documentId: string,
+  documentName: string,
+  reason?: string
+) => {
+  const notifications = await Promise.all(
+    userIds.map(userId =>
+      createNotification({
+        userId,
+        type: 'SIGNATURE_REVERTED',
+        title: 'Firma revertida',
+        message: reason
+          ? `La firma del documento "${documentName}" ha sido revertida. Razón: ${reason}`
+          : `La firma del documento "${documentName}" ha sido revertida`,
+        data: { documentId, documentName, reason },
+        priority: 'HIGH',
+        actionUrl: `/dashboard/archivo/documentos/${documentId}`,
+        actionLabel: 'Ver Documento'
+      })
+    )
+  );
+
+  return notifications;
+};
+
+export const createFlowCompletedNotification = async (
+  userIds: string[],
+  flowId: string,
+  flowName: string,
+  documentName: string,
+  documentId?: string
+) => {
+  const actionUrl = documentId 
+    ? `/dashboard/archivo/documentos/${documentId}`
+    : `/dashboard/firma/flujos`;
+
+  const notifications = await Promise.all(
+    userIds.map(userId =>
+      createNotification({
+        userId,
+        type: 'FLOW_COMPLETED',
+        title: 'Flujo de firma completado',
+        message: `El flujo de firma "${flowName}" para el documento "${documentName}" ha sido completado`,
+        data: { flowId, flowName, documentName, documentId },
+        priority: 'NORMAL',
+        actionUrl,
+        actionLabel: 'Ver Documento'
+      })
+    )
+  );
+
+  return notifications;
+};
+
+export const getUserNotifications = async (
+  userId: string,
+  filters: GetNotificationsFilters = {}
+) => {
+  const {
+    isRead,
+    type,
+    priority,
+    dateFrom,
+    page = 1,
+    limit = 10
+  } = filters;
+
+  const skip = (page - 1) * limit;
+
+  const where: any = {
+    userId,
+    OR: [
+      { expiresAt: null },
+      { expiresAt: { gt: new Date() } }
+    ]
+  };
+
+  if (isRead !== undefined) {
+    where.isRead = isRead;
+  }
+
+  if (type) {
+    where.type = type;
+  }
+
+  if (priority) {
+    where.priority = priority;
+  }
+
+  if (dateFrom) {
+    where.createdAt = {
+      gte: dateFrom
+    };
+  }
+
+  const priorityOrder = {
+    URGENT: 4,
+    HIGH: 3,
+    NORMAL: 2,
+    LOW: 1
+  };
+
+  const [notifications, total] = await Promise.all([
+    prisma.notification.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: [
+        { isRead: 'asc' },
+        { createdAt: 'desc' }
+      ],
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      }
+    }),
+    prisma.notification.count({ where })
+  ]);
+
+  const sortedNotifications = notifications.sort((a, b) => {
+    if (a.isRead !== b.isRead) {
+      return a.isRead ? 1 : -1;
+    }
+
+    const priorityDiff = (priorityOrder as any)[b.priority] - (priorityOrder as any)[a.priority];
+    if (priorityDiff !== 0) {
+      return priorityDiff;
+    }
+
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
+  const totalPages = Math.ceil(total / limit);
+
+  return {
+    notifications: sortedNotifications,
+    total,
+    page,
+    limit,
+    totalPages
+  };
+};
+
+export const markAsRead = async (notificationId: string, userId: string) => {
+  const notification = await prisma.notification.findUnique({
+    where: { id: notificationId }
+  });
+
+  if (!notification) {
+    throw new Error('Notificación no encontrada');
+  }
+
+  if (notification.userId !== userId) {
+    throw new Error('No tienes permisos para marcar esta notificación como leída');
+  }
+
+  if (notification.isRead) {
+    return notification;
+  }
+
+  return prisma.notification.update({
+    where: { id: notificationId },
+    data: {
+      isRead: true,
+      readAt: new Date()
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          firstName: true,
+          lastName: true
+        }
+      }
+    }
+  });
+};
+
+export const markAllAsRead = async (userId: string) => {
+  const result = await prisma.notification.updateMany({
+    where: {
+      userId,
+      isRead: false
+    },
+    data: {
+      isRead: true,
+      readAt: new Date()
+    }
+  });
+
+  return result;
+};
+
+export const deleteNotification = async (notificationId: string, userId: string) => {
+  const notification = await prisma.notification.findUnique({
+    where: { id: notificationId }
+  });
+
+  if (!notification) {
+    throw new Error('Notificación no encontrada');
+  }
+
+  if (notification.userId !== userId) {
+    throw new Error('No tienes permisos para eliminar esta notificación');
+  }
+
+  await prisma.notification.delete({
+    where: { id: notificationId }
+  });
+
+  return { message: 'Notificación eliminada correctamente' };
+};
+
+export const getUnreadCount = async (userId: string) => {
+  const count = await prisma.notification.count({
+    where: {
+      userId,
+      isRead: false,
+      OR: [
+        { expiresAt: null },
+        { expiresAt: { gt: new Date() } }
+      ]
+    }
+  });
+
+  return count;
+};
+
+export const cleanExpiredNotifications = async () => {
+  const result = await prisma.notification.deleteMany({
+    where: {
+      expiresAt: {
+        lt: new Date()
+      }
+    }
+  });
+
+  console.log(`🧹 Limpieza de notificaciones expiradas: ${result.count} eliminadas`);
+  
+  return result;
+};
+
+export default {
+  createNotification,
+  createSignaturePendingNotification,
+  createFlowAdvanceNotification,
+  createSignatureCompletedNotification,
+  createSignatureRevertedNotification,
+  createFlowCompletedNotification,
+  getUserNotifications,
+  markAsRead,
+  markAllAsRead,
+  deleteNotification,
+  getUnreadCount,
+  cleanExpiredNotifications
+};

@@ -1,0 +1,76 @@
+{
+  "name": "archivo-digital-disa-backend",
+  "version": "1.0.0",
+  "description": "Sistema Integrado de Archivos Digitales - Backend API",
+  "main": "dist/server.js",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "nodemon --exec ts-node src/server.ts",
+    "build": "tsc",
+    "build:prod": "npm run typecheck && npm run build && npm run prisma:generate",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/server.js",
+    "start:prod": "NODE_ENV=production node dist/server.js",
+    "check:prod": "node scripts/health-check.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "prisma:seed": "ts-node prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
+  "keywords": [
+    "express",
+    "typescript",
+    "prisma",
+    "mysql",
+    "archivo-digital"
+  ],
+  "author": "DISA CHINCHEROS",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^5.7.0",
+    "@types/archiver": "^7.0.0",
+    "archiver": "^7.0.1",
+    "axios": "^1.12.2",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "csv-stringify": "^6.6.0",
+    "dotenv": "^16.3.1",
+    "exceljs": "^4.4.0",
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.1.0",
+    "extract-zip": "^2.0.1",
+    "form-data": "^4.0.4",
+    "helmet": "^7.1.0",
+    "joi": "^17.11.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.15.3",
+    "pdf-lib": "^1.17.1",
+    "pdf-parse": "^1.1.1",
+    "sharp": "^0.34.4",
+    "tesseract.js": "^6.0.1",
+    "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/morgan": "^1.9.9",
+    "@types/multer": "^1.4.11",
+    "@types/node": "^20.19.21",
+    "@types/uuid": "^8.3.4",
+    "nodemon": "^3.0.2",
+    "prisma": "^5.7.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

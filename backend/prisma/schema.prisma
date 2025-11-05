@@ -1,0 +1,438 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextIndex", "fullTextSearch"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  permissions Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users User[]
+
+  @@map("roles")
+}
+
+model User {
+  id             String    @id @default(uuid())
+  username       String    @unique
+  email          String    @unique
+  password       String
+  firstName      String
+  lastName       String
+  roleId         String
+  isActive       Boolean   @default(true)
+  onboardingData Json?
+  failedAttempts Int       @default(0)
+  lastFailedAt   DateTime?
+  lockedUntil    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  role              Role              @relation(fields: [roleId], references: [id])
+  documents         Document[]        @relation("DocumentCreator")
+  archivadores      Archivador[]      @relation("ArchivadorCreator")
+  documentVersions  DocumentVersion[] @relation("VersionCreator")
+  signatures        Signature[]       @relation("SignatureSigner")
+  revertedSignatures Signature[]      @relation("RevertedSignatures")
+  signatureFlows    SignatureFlow[]   @relation("FlowCreator")
+  expedientes       Expediente[]      @relation("ExpedienteCreator")
+  auditLogs         AuditLog[]
+  notifications     Notification[]
+  configUpdates     SystemConfig[]    @relation("ConfigUpdater")
+  backupJobs        BackupJob[]       @relation("BackupJobCreator")
+  backupRestores    BackupRestoreLog[] @relation("BackupRestoreCreator")
+
+  @@index([roleId])
+  @@map("users")
+}
+
+model Office {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  documents Document[]
+
+  @@map("offices")
+}
+
+model DocumentType {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  documents Document[]
+
+  @@map("document_types")
+}
+
+model Period {
+  id          String   @id @default(uuid())
+  year        Int      @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  archivadores Archivador[]
+
+  @@map("periods")
+}
+
+model Archivador {
+  id               String   @id @default(uuid())
+  code             String   @unique
+  name             String
+  periodId         String
+  physicalLocation Json
+  createdBy        String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  period   Period     @relation(fields: [periodId], references: [id])
+  creator  User       @relation("ArchivadorCreator", fields: [createdBy], references: [id])
+  documents Document[]
+
+  @@index([periodId])
+  @@index([createdBy])
+  @@map("archivadores")
+}
+
+model Document {
+  id             String   @id @default(uuid())
+  archivadorId   String
+  documentTypeId String
+  officeId       String
+  expedienteId   String?
+  documentNumber String
+  documentDate   DateTime
+  sender         String
+  folioCount     Int
+  annotations    String   @db.Text
+  ocrContent     String?  @db.Text
+  ocrStatus      String   @default("PENDING")
+  ocrError       String?  @db.Text
+  filePath       String
+  fileName       String
+  fileSize       Int
+  mimeType       String
+  currentVersion Int      @default(1)
+  signatureStatus String  @default("UNSIGNED") // UNSIGNED, SIGNED, PARTIALLY_SIGNED, REVERTED
+  lastSignedAt   DateTime?
+  signedBy       String?
+  createdBy      String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  archivador     Archivador        @relation(fields: [archivadorId], references: [id])
+  documentType   DocumentType      @relation(fields: [documentTypeId], references: [id])
+  office         Office            @relation(fields: [officeId], references: [id])
+  expediente     Expediente?       @relation(fields: [expedienteId], references: [id])
+  creator        User              @relation("DocumentCreator", fields: [createdBy], references: [id])
+  versions       DocumentVersion[]
+  signatures     Signature[]
+  signatureFlows SignatureFlow[]
+
+  @@index([archivadorId])
+  @@index([documentTypeId])
+  @@index([officeId])
+  @@index([expedienteId])
+  @@index([documentNumber])
+  @@index([documentDate])
+  @@index([sender])
+  @@index([createdBy])
+  @@index([documentDate, documentTypeId])
+  @@index([ocrStatus])
+  @@index([signatureStatus])
+  @@index([createdAt])
+  @@fulltext([annotations])
+  @@fulltext([ocrContent])
+  @@map("documents")
+}
+
+model DocumentVersion {
+  id                String   @id @default(uuid())
+  documentId        String
+  versionNumber     Int
+  filePath          String
+  fileName          String
+  changeDescription String   @db.Text
+  createdBy         String
+  createdAt         DateTime @default(now())
+
+  document   Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  creator    User        @relation("VersionCreator", fields: [createdBy], references: [id])
+  signatures Signature[]
+
+  @@unique([documentId, versionNumber])
+  @@index([documentId])
+  @@index([createdBy])
+  @@map("document_versions")
+}
+
+model Signature {
+  id                  String   @id @default(uuid())
+  documentId          String
+  documentVersionId   String?
+  signerId            String
+  signatureData       Json     // JSON con los datos de la firma/validación de Firma Perú
+  certificateData     Json     // JSON con los datos del certificado
+  timestamp           DateTime @default(now())
+  isValid             Boolean  @default(true)
+  status              String   @default("PENDING") // PENDING, VALID, INVALID, INDETERMINATE
+  observations        String   @db.Text // Observaciones de la validación como string JSON
+  isReverted          Boolean  @default(false)
+  revertedAt          DateTime?
+  revertedBy          String?
+  revertReason        String?  @db.Text
+  createdAt           DateTime @default(now())
+
+  document       Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version        DocumentVersion? @relation(fields: [documentVersionId], references: [id])
+  signer         User             @relation("SignatureSigner", fields: [signerId], references: [id])
+  revertedByUser User?            @relation("RevertedSignatures", fields: [revertedBy], references: [id])
+
+  @@index([documentId])
+  @@index([documentVersionId])
+  @@index([signerId])
+  @@index([timestamp])
+  @@index([status])
+  @@index([isReverted])
+  @@index([revertedBy])
+  @@map("signatures")
+}
+
+model SignatureFlow {
+  id          String   @id @default(uuid())
+  name        String
+  documentId  String
+  signers     Json
+  currentStep Int      @default(0)
+  status      String   @default("PENDING")
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  creator  User     @relation("FlowCreator", fields: [createdBy], references: [id])
+
+  @@index([documentId])
+  @@index([status])
+  @@index([createdBy])
+  @@map("signature_flows")
+}
+
+model Expediente {
+  id          String     @id @default(uuid())
+  code        String     @unique
+  name        String
+  description String?    @db.Text
+  createdBy   String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  creator   User       @relation("ExpedienteCreator", fields: [createdBy], references: [id])
+  documents Document[]
+
+  @@index([createdBy])
+  @@index([code])
+  @@map("expedientes")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  action     String
+  module     String
+  entityType String
+  entityId   String
+  oldValue   Json?
+  newValue   Json?
+  ipAddress  String
+  userAgent  String   @db.Text
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([module])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@map("audit_logs")
+}
+
+model SystemConfig {
+  id                    String   @id @default(uuid())
+  companyName           String   @default("Sistema Integrado de Archivos Digitales")
+  companyTagline        String?
+  companyEmail          String?
+  contactPhone          String?
+  supportEmail          String?
+  websiteUrl            String?
+  primaryColor          String?
+  accentColor           String?
+  logoFileName          String?
+  logoFilePath          String?
+  logoMimeType          String?
+  logoFileSize          Int?
+  faviconFileName       String?
+  faviconFilePath       String?
+  faviconMimeType       String?
+  faviconFileSize       Int?
+  stampFileName         String?
+  stampFilePath         String?
+  stampMimeType         String?
+  stampFileSize         Int?
+  loginBg1FileName      String?
+  loginBg1FilePath      String?
+  loginBg1MimeType      String?
+  loginBg1FileSize      Int?
+  loginBg2FileName      String?
+  loginBg2FilePath      String?
+  loginBg2MimeType      String?
+  loginBg2FileSize      Int?
+  loginBg3FileName      String?
+  loginBg3FilePath      String?
+  loginBg3MimeType      String?
+  loginBg3FileSize      Int?
+  loginBg4FileName      String?
+  loginBg4FilePath      String?
+  loginBg4MimeType      String?
+  loginBg4FileSize      Int?
+  loginBg5FileName      String?
+  loginBg5FilePath      String?
+  loginBg5MimeType      String?
+  loginBg5FileSize      Int?
+  signatureStampEnabled Boolean  @default(true)
+  maintenanceMode       Boolean  @default(false)
+  updatedBy             String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  updater User? @relation("ConfigUpdater", fields: [updatedBy], references: [id])
+
+  @@index([updatedAt])
+  @@index([updatedBy])
+  @@map("system_config")
+}
+
+model Notification {
+  id          String    @id @default(uuid())
+  userId      String
+  type        String
+  title       String
+  message     String    @db.Text
+  data        Json?
+  isRead      Boolean   @default(false)
+  readAt      DateTime?
+  priority    String    @default("NORMAL")
+  actionUrl   String?
+  actionLabel String?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([type])
+  @@index([priority])
+  @@index([createdAt])
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model BackupJob {
+  id                String   @id @default(uuid())
+  status            String   @default("PENDING") // PENDING, RUNNING, COMPLETED, FAILED
+  startedAt         DateTime?
+  completedAt       DateTime?
+  totalSize         Int      @default(0) // bytes
+  recordCount       Int      @default(0)
+  fileCount         Int      @default(0)
+  packagePath       String?
+  manifestPath      String?
+  errorMessage      String?  @db.Text
+  createdBy         String
+  ipAddress         String
+  userAgent         String   @db.Text
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  creator       User         @relation("BackupJobCreator", fields: [createdBy], references: [id])
+  backupItems   BackupItem[]
+
+  @@index([status])
+  @@index([createdBy])
+  @@index([createdAt])
+  @@map("backup_jobs")
+}
+
+model BackupItem {
+  id           String   @id @default(uuid())
+  backupJobId  String
+  itemType     String   // DB_RECORD, PDF_FILE
+  entityType   String   // Document, DocumentVersion, Signature, etc.
+  sourceId     String   // ID original de la entidad
+  fileHash     String?  // SHA-256 hash del archivo (para PDFs)
+  filePath     String?  // Ruta relativa dentro del paquete
+  metadata     Json?    // Metadatos adicionales
+  createdAt    DateTime @default(now())
+
+  backupJob BackupJob @relation(fields: [backupJobId], references: [id], onDelete: Cascade)
+
+  @@index([backupJobId])
+  @@index([itemType])
+  @@index([entityType])
+  @@index([fileHash])
+  @@index([sourceId])
+  @@map("backup_items")
+}
+
+model BackupRestoreLog {
+  id              String    @id @default(uuid())
+  backupJobId     String?
+  status          String    @default("PENDING") // PENDING, VALIDATING, RESTORING_DB, RESTORING_FILES, COMPLETED, FAILED
+  startedAt       DateTime?
+  completedAt     DateTime?
+  totalRecords    Int       @default(0)
+  restoredRecords Int       @default(0)
+  totalFiles      Int       @default(0)
+  restoredFiles   Int       @default(0)
+  skippedFiles    Int       @default(0) // Archivos que ya existían con mismo hash
+  errorMessage    String?   @db.Text
+  validationLog   Json?     // Resultados de validación del paquete
+  restoreLog      Json?     // Log detallado de operaciones de restauración
+  createdBy       String
+  ipAddress       String
+  userAgent       String    @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  creator User @relation("BackupRestoreCreator", fields: [createdBy], references: [id])
+
+  @@index([status])
+  @@index([backupJobId])
+  @@index([createdBy])
+  @@index([createdAt])
+  @@map("backup_restore_logs")
+}

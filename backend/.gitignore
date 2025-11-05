@@ -1,0 +1,15 @@
+node_modules
+dist
+.env
+uploads/*
+!uploads/.gitkeep
+!uploads/documents/.gitkeep
+!uploads/system-config/
+!uploads/system-config/.gitkeep
+!uploads/system-config/logo/.gitkeep
+!uploads/system-config/stamp/.gitkeep
+*.log
+.DS_Store
+coverage
+.vscode
+.idea

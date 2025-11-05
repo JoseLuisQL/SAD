@@ -1,0 +1,141 @@
+/* Report Module Theme Variables */
+:root {
+  /* Corporate Color Palette */
+  --report-primary: #1d4ed8; /* blue-700 */
+  --report-secondary: #0f766e; /* teal-700 */
+  --report-accent: #f59e0b; /* amber-500 */
+  --report-success: #10b981; /* emerald-500 */
+  --report-error: #ef4444; /* red-500 */
+  --report-violet: #8b5cf6; /* violet-500 */
+
+  /* Spacing */
+  --report-spacing-xs: 0.25rem; /* 4px */
+  --report-spacing-sm: 0.5rem; /* 8px */
+  --report-spacing-md: 1rem; /* 16px */
+  --report-spacing-lg: 1.5rem; /* 24px */
+  --report-spacing-xl: 2rem; /* 32px */
+  --report-spacing-2xl: 3rem; /* 48px */
+
+  /* Border Radius */
+  --report-radius-sm: 0.5rem; /* 8px */
+  --report-radius-md: 1rem; /* 16px */
+  --report-radius-lg: 1.5rem; /* 24px */
+
+  /* Shadows */
+  --report-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --report-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --report-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --report-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+
+  /* Typography */
+  --report-font-size-xs: 0.75rem; /* 12px */
+  --report-font-size-sm: 0.875rem; /* 14px */
+  --report-font-size-base: 1rem; /* 16px */
+  --report-font-size-lg: 1.125rem; /* 18px */
+  --report-font-size-xl: 1.25rem; /* 20px */
+  --report-font-size-2xl: 1.5rem; /* 24px */
+  --report-font-size-3xl: 1.875rem; /* 30px */
+  --report-font-size-4xl: 2.25rem; /* 36px */
+
+  /* Chart Colors */
+  --report-chart-1: #1d4ed8;
+  --report-chart-2: #10b981;
+  --report-chart-3: #f59e0b;
+  --report-chart-4: #ef4444;
+  --report-chart-5: #8b5cf6;
+  --report-chart-6: #ec4899;
+  --report-chart-7: #06b6d4;
+  --report-chart-8: #84cc16;
+}
+
+/* Report Container Styles */
+.report-container {
+  min-height: 100vh;
+  background-color: #f8fafc; /* slate-50 */
+  padding: var(--report-spacing-xl);
+}
+
+.report-section {
+  background-color: white;
+  box-shadow: var(--report-shadow-sm);
+  border-radius: var(--report-radius-lg);
+  border: 1px solid #e2e8f0; /* slate-200 */
+  padding: var(--report-spacing-lg);
+}
+
+/* Summary Card Styles */
+.report-summary-card {
+  background-color: white;
+  padding: var(--report-spacing-lg);
+  border-radius: var(--report-radius-md);
+  border: 1px solid #e2e8f0;
+  box-shadow: var(--report-shadow-sm);
+  transition: all 0.2s ease-in-out;
+}
+
+.report-summary-card:hover {
+  box-shadow: var(--report-shadow-md);
+  transform: translateY(-2px);
+}
+
+.report-summary-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.report-summary-value {
+  font-size: var(--report-font-size-4xl);
+  font-weight: 600;
+  color: #0f172a; /* slate-900 */
+  line-height: 1.2;
+}
+
+/* Chart Container Styles */
+.report-chart-container {
+  background-color: white;
+  padding: var(--report-spacing-lg);
+  border-radius: var(--report-radius-lg);
+  border: 1px solid #e2e8f0;
+  box-shadow: var(--report-shadow-sm);
+}
+
+.report-chart-title {
+  font-size: var(--report-font-size-base);
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: var(--report-spacing-md);
+}
+
+/* Tooltip Styles */
+.report-tooltip {
+  background-color: white !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: var(--report-shadow-lg) !important;
+  border-radius: var(--report-radius-sm) !important;
+  padding: var(--report-spacing-sm) var(--report-spacing-md) !important;
+}
+
+/* Accessibility - High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .report-section,
+  .report-summary-card,
+  .report-chart-container {
+    border-width: 2px;
+    border-color: #334155;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .report-container {
+    padding: var(--report-spacing-md);
+  }
+
+  .report-summary-value {
+    font-size: var(--report-font-size-3xl);
+  }
+}

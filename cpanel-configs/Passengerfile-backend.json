@@ -1,0 +1,18 @@
+{
+  "app_type": "node",
+  "startup_file": "dist/server.js",
+  "envvars": {
+    "NODE_ENV": "production",
+    "PORT": "49152"
+  },
+  "log_level": 3,
+  "app_log_file": "/home/USUARIO/apps/sad/logs/backend/passenger.log",
+  "node": "/usr/bin/node",
+  "friendly_error_pages": "false",
+  "max_pool_size": 1,
+  "min_instances": 1,
+  "max_instances": 1,
+  "spawn_method": "direct",
+  "max_request_queue_size": 100,
+  "sticky_sessions": true
+}

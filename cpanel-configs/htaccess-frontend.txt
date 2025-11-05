@@ -1,0 +1,84 @@
+# .htaccess para Frontend (Dominio Principal)
+# Ubicación: /home/USUARIO/public_html/.htaccess
+# O: Document root del dominio archivos.risvirgendecocharcas.gob.pe
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Forzar HTTPS
+    RewriteCond %{HTTPS} off
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+    
+    # Redirigir /api/* al subdominio api (opcional, si se usa subdominio separado)
+    RewriteCond %{REQUEST_URI} ^/api/
+    RewriteRule ^api/(.*)$ https://api.archivos.risvirgendecocharcas.gob.pe/api/$1 [P,L]
+    
+    # Proxy hacia aplicación Node.js frontend
+    # REEMPLAZAR 49153 CON EL PUERTO ASIGNADO POR CPANEL
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ http://localhost:49153/$1 [P,L]
+</IfModule>
+
+<IfModule mod_proxy.c>
+    ProxyPreserveHost On
+    ProxyRequests Off
+    
+    # Proxy para frontend
+    ProxyPass / http://localhost:49153/
+    ProxyPassReverse / http://localhost:49153/
+</IfModule>
+
+# Cache control para assets estáticos
+<IfModule mod_expires.c>
+    ExpiresActive On
+    
+    # Imágenes
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/x-icon "access plus 1 year"
+    
+    # CSS y JavaScript
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType text/javascript "access plus 1 month"
+    
+    # Fonts
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType font/ttf "access plus 1 year"
+    ExpiresByType application/font-woff "access plus 1 year"
+    ExpiresByType application/font-woff2 "access plus 1 year"
+</IfModule>
+
+# Compresión
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json application/xml
+</IfModule>
+
+# Security Headers
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    
+    # Cache para assets de Next.js
+    <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|woff|woff2|ttf|eot|ico)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+    
+    <FilesMatch "\.(css|js)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>
+
+# Disable directory listing
+Options -Indexes
+
+# Custom error pages
+ErrorDocument 404 /404.html
+ErrorDocument 500 /500.html
+ErrorDocument 503 /503.html

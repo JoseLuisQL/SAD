@@ -1,0 +1,104 @@
+// Extensión del schema Prisma para el Módulo de Copias de Seguridad Inteligente
+// Agregar estos modelos al archivo backend/prisma/schema.prisma
+
+model BackupSettings {
+  id                     String   @id @default(uuid())
+  backupPath             String   @default("C:\\SAD\\backups")
+  retentionDays          Int      @default(30)
+  compressionEnabled     Boolean  @default(true)
+  encryptionEnabled      Boolean  @default(false)
+  encryptionKey          String?
+  maxBackupsToKeep       Int      @default(10)
+  incrementalEnabled     Boolean  @default(true)
+  scheduleEnabled        Boolean  @default(false)
+  scheduleCron           String?
+  lastBackupAt           DateTime?
+  lastBackupJobId        String?
+  notifyOnSuccess        Boolean  @default(true)
+  notifyOnFailure        Boolean  @default(true)
+  notificationEmails     Json?
+  excludeTables          Json?
+  excludeFilePatterns    Json?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  updatedBy              String?
+
+  updater                User?     @relation("BackupSettingsUpdater", fields: [updatedBy], references: [id])
+  jobs                   BackupJob[]
+
+  @@index([lastBackupAt])
+  @@index([updatedBy])
+  @@map("backup_settings")
+}
+
+model BackupJob {
+  id                  String    @id @default(uuid())
+  settingsId          String
+  type                String    // FULL, INCREMENTAL
+  status              String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, FAILED, CANCELLED
+  startedAt           DateTime  @default(now())
+  completedAt         DateTime?
+  backupPath          String?
+  manifestPath        String?
+  totalSizeBytes      BigInt    @default(0)
+  filesCount          Int       @default(0)
+  recordsCount        Int       @default(0)
+  compressedSizeBytes BigInt?
+  compressionRatio    Float?
+  errorMessage        String?   @db.Text
+  errorStack          String?   @db.Text
+  createdBy           String
+  cancelledBy         String?
+  cancelledAt         DateTime?
+  cancelReason        String?   @db.Text
+  restoredAt          DateTime?
+  restoredBy          String?
+
+  settings            BackupSettings @relation(fields: [settingsId], references: [id])
+  creator             User           @relation("BackupJobCreator", fields: [createdBy], references: [id])
+  canceller           User?          @relation("BackupJobCanceller", fields: [cancelledBy], references: [id])
+  restorer            User?          @relation("BackupJobRestorer", fields: [restoredBy], references: [id])
+  items               BackupItem[]
+
+  @@index([status])
+  @@index([type])
+  @@index([startedAt])
+  @@index([completedAt])
+  @@index([createdBy])
+  @@index([settingsId])
+  @@map("backup_jobs")
+}
+
+model BackupItem {
+  id             String   @id @default(uuid())
+  jobId          String
+  itemType       String   // FILE, TABLE_RECORD
+  entityType     String   // Document, DocumentVersion, User, etc. o "FILE"
+  entityId       String?
+  filePath       String?
+  fileHash       String?  // SHA-256
+  fileSize       BigInt?
+  tableName      String?
+  recordSnapshot Json?
+  backupAction   String   @default("ADDED") // ADDED, UPDATED, UNCHANGED, DELETED
+  createdAt      DateTime @default(now())
+
+  job            BackupJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([entityType, entityId])
+  @@index([fileHash])
+  @@index([tableName])
+  @@map("backup_items")
+}
+
+// Actualizar el modelo User existente agregando estas relaciones:
+// 
+// model User {
+//   // ... campos existentes ...
+//   
+//   backupJobs          BackupJob[]        @relation("BackupJobCreator")
+//   cancelledBackupJobs BackupJob[]        @relation("BackupJobCanceller")
+//   restoredBackupJobs  BackupJob[]        @relation("BackupJobRestorer")
+//   backupSettings      BackupSettings[]   @relation("BackupSettingsUpdater")
+// }
