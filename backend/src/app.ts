@@ -56,8 +56,13 @@ app.use(cors({
       return callback(null, true);
     }
 
-    // Permitir peticiones desde localhost en cualquier puerto (para componente de Firma Perú)
+    // Permitir peticiones desde localhost en cualquier puerto (para desarrollo y componente de Firma Perú)
     if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+      return callback(null, true);
+    }
+
+    // Permitir dominios de Vercel en producción (*.vercel.app)
+    if (process.env.NODE_ENV === 'production' && origin.endsWith('.vercel.app')) {
       return callback(null, true);
     }
 
