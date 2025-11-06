@@ -17,6 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { BrandingAssetsSection } from '@/components/configuration/BrandingAssetsSection';
+import { ExternalUrlsSection } from '@/components/configuration/ExternalUrlsSection';
 
 const generalConfigSchema = z.object({
   companyName: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
@@ -625,6 +626,9 @@ export default function ConfiguracionPage() {
             </div>
           </Card>
         </div>
+
+        {/* External URLs Section */}
+        <ExternalUrlsSection onUpdate={fetchConfig} />
 
         {/* Login Backgrounds Section */}
         <BrandingAssetsSection
