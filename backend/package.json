@@ -15,6 +15,7 @@
     "start": "node dist/server.js",
     "start:prod": "NODE_ENV=production node dist/server.js",
     "check:prod": "node scripts/health-check.js",
+    "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
@@ -34,7 +35,7 @@
   "author": "DISA CHINCHEROS",
   "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^5.7.0",
+    "@prisma/client": "^5.22.0",
     "@types/archiver": "^7.0.0",
     "archiver": "^7.0.1",
     "axios": "^1.12.2",
@@ -60,6 +61,8 @@
     "uuid": "^8.3.2"
   },
   "devDependencies": {
+    "@prisma/fetch-engine": "^6.19.0",
+    "@prisma/get-platform": "^6.19.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
