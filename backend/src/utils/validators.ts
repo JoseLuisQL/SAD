@@ -746,3 +746,34 @@ export const brandAssetTypeSchema = Joi.string()
     'any.only': 'El tipo de activo debe ser "logo" o "stamp"',
     'any.required': 'El tipo de activo es requerido'
   });
+
+export const updateExternalImageUrlsSchema = Joi.object({
+  logoUrl: Joi.string()
+    .uri()
+    .allow('', null)
+    .optional()
+    .messages({
+      'string.base': 'La URL del logo debe ser texto',
+      'string.uri': 'La URL del logo debe ser válida'
+    }),
+  
+  faviconUrl: Joi.string()
+    .uri()
+    .allow('', null)
+    .optional()
+    .messages({
+      'string.base': 'La URL del favicon debe ser texto',
+      'string.uri': 'La URL del favicon debe ser válida'
+    }),
+  
+  stampUrl: Joi.string()
+    .uri()
+    .allow('', null)
+    .optional()
+    .messages({
+      'string.base': 'La URL del sello debe ser texto',
+      'string.uri': 'La URL del sello debe ser válida'
+    })
+}).min(1).messages({
+  'object.min': 'Debe proporcionar al menos una URL para actualizar'
+});

@@ -372,7 +372,22 @@ export const updateExternalUrls = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    const config = await configurationService.updateExternalUrls(req.body, req.user.id, req);
+    const { updateExternalImageUrlsSchema } = require('../utils/validators');
+    const { error, value } = updateExternalImageUrlsSchema.validate(req.body);
+
+    if (error) {
+      res.status(400).json({
+        status: 'error',
+        message: 'Error de validación',
+        errors: error.details.map((detail: any) => ({
+          field: detail.path.join('.'),
+          message: detail.message
+        }))
+      });
+      return;
+    }
+
+    const config = await configurationService.updateExternalImageUrls(value, req.user.id, req);
 
     res.status(200).json({
       status: 'success',

@@ -235,13 +235,27 @@ export default function GlobalSearchCommand({
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
       const downloadUrl = `${apiUrl}/documents/${doc.id}/download`;
-      
+
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.download = doc.fileName || `document-${doc.documentNumber}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+
+      // Safely append, click, and remove
+      if (document.body) {
+        document.body.appendChild(link);
+        link.click();
+
+        // Use setTimeout to ensure click completes before removal
+        setTimeout(() => {
+          try {
+            if (link.parentNode && document.contains(link)) {
+              link.parentNode.removeChild(link);
+            }
+          } catch (cleanupError) {
+            console.debug('Download cleanup skipped:', cleanupError);
+          }
+        }, 100);
+      }
 
       toast.success('Descarga iniciada');
     } catch (error) {

@@ -110,15 +110,25 @@ export default function CopiasPage() {
       const a = document.createElement('a');
       a.href = url;
       a.download = fileName || `backup-${backupId}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      
-      // Cleanup
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }, 100);
-      
+
+      // Safely append, click, and remove
+      if (document.body) {
+        document.body.appendChild(a);
+        a.click();
+
+        // Cleanup
+        setTimeout(() => {
+          try {
+            if (a.parentNode && document.contains(a)) {
+              a.parentNode.removeChild(a);
+            }
+            window.URL.revokeObjectURL(url);
+          } catch (cleanupError) {
+            console.debug('Download cleanup skipped:', cleanupError);
+          }
+        }, 100);
+      }
+
       toast.success('Backup descargado exitosamente');
     } catch (error: any) {
       console.error('Error downloading backup:', error);

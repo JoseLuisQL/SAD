@@ -31,6 +31,16 @@ const nextConfig: NextConfig = {
         hostname: 'archivos.risvirgendecocharcas.gob.pe',
         pathname: '/api/**',
       },
+      // Permitir imágenes externas de cualquier dominio HTTPS
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+      // Permitir imágenes externas de cualquier dominio HTTP (solo para desarrollo)
+      {
+        protocol: 'http',
+        hostname: '**',
+      },
     ],
   },
   eslint: {

@@ -37,19 +37,19 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  role              Role              @relation(fields: [roleId], references: [id])
-  documents         Document[]        @relation("DocumentCreator")
-  archivadores      Archivador[]      @relation("ArchivadorCreator")
-  documentVersions  DocumentVersion[] @relation("VersionCreator")
-  signatures        Signature[]       @relation("SignatureSigner")
-  revertedSignatures Signature[]      @relation("RevertedSignatures")
-  signatureFlows    SignatureFlow[]   @relation("FlowCreator")
-  expedientes       Expediente[]      @relation("ExpedienteCreator")
-  auditLogs         AuditLog[]
-  notifications     Notification[]
-  configUpdates     SystemConfig[]    @relation("ConfigUpdater")
-  backupJobs        BackupJob[]       @relation("BackupJobCreator")
-  backupRestores    BackupRestoreLog[] @relation("BackupRestoreCreator")
+  role               Role               @relation(fields: [roleId], references: [id])
+  documents          Document[]         @relation("DocumentCreator")
+  archivadores       Archivador[]       @relation("ArchivadorCreator")
+  documentVersions   DocumentVersion[]  @relation("VersionCreator")
+  signatures         Signature[]        @relation("SignatureSigner")
+  revertedSignatures Signature[]        @relation("RevertedSignatures")
+  signatureFlows     SignatureFlow[]    @relation("FlowCreator")
+  expedientes        Expediente[]       @relation("ExpedienteCreator")
+  auditLogs          AuditLog[]
+  notifications      Notification[]
+  configUpdates      SystemConfig[]     @relation("ConfigUpdater")
+  backupJobs         BackupJob[]        @relation("BackupJobCreator")
+  backupRestores     BackupRestoreLog[] @relation("BackupRestoreCreator")
 
   @@index([roleId])
   @@map("users")
@@ -106,8 +106,8 @@ model Archivador {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  period   Period     @relation(fields: [periodId], references: [id])
-  creator  User       @relation("ArchivadorCreator", fields: [createdBy], references: [id])
+  period    Period     @relation(fields: [periodId], references: [id])
+  creator   User       @relation("ArchivadorCreator", fields: [createdBy], references: [id])
   documents Document[]
 
   @@index([periodId])
@@ -116,30 +116,30 @@ model Archivador {
 }
 
 model Document {
-  id             String   @id @default(uuid())
-  archivadorId   String
-  documentTypeId String
-  officeId       String
-  expedienteId   String?
-  documentNumber String
-  documentDate   DateTime
-  sender         String
-  folioCount     Int
-  annotations    String   @db.Text
-  ocrContent     String?  @db.Text
-  ocrStatus      String   @default("PENDING")
-  ocrError       String?  @db.Text
-  filePath       String
-  fileName       String
-  fileSize       Int
-  mimeType       String
-  currentVersion Int      @default(1)
-  signatureStatus String  @default("UNSIGNED") // UNSIGNED, SIGNED, PARTIALLY_SIGNED, REVERTED
-  lastSignedAt   DateTime?
-  signedBy       String?
-  createdBy      String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String    @id @default(uuid())
+  archivadorId    String
+  documentTypeId  String
+  officeId        String
+  expedienteId    String?
+  documentNumber  String
+  documentDate    DateTime
+  sender          String
+  folioCount      Int
+  annotations     String    @db.Text
+  ocrContent      String?   @db.Text
+  ocrStatus       String    @default("PENDING")
+  ocrError        String?   @db.Text
+  filePath        String
+  fileName        String
+  fileSize        Int
+  mimeType        String
+  currentVersion  Int       @default(1)
+  signatureStatus String    @default("UNSIGNED") // UNSIGNED, SIGNED, PARTIALLY_SIGNED, REVERTED
+  lastSignedAt    DateTime?
+  signedBy        String?
+  createdBy       String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   archivador     Archivador        @relation(fields: [archivadorId], references: [id])
   documentType   DocumentType      @relation(fields: [documentTypeId], references: [id])
@@ -188,21 +188,21 @@ model DocumentVersion {
 }
 
 model Signature {
-  id                  String   @id @default(uuid())
-  documentId          String
-  documentVersionId   String?
-  signerId            String
-  signatureData       Json     // JSON con los datos de la firma/validación de Firma Perú
-  certificateData     Json     // JSON con los datos del certificado
-  timestamp           DateTime @default(now())
-  isValid             Boolean  @default(true)
-  status              String   @default("PENDING") // PENDING, VALID, INVALID, INDETERMINATE
-  observations        String   @db.Text // Observaciones de la validación como string JSON
-  isReverted          Boolean  @default(false)
-  revertedAt          DateTime?
-  revertedBy          String?
-  revertReason        String?  @db.Text
-  createdAt           DateTime @default(now())
+  id                String    @id @default(uuid())
+  documentId        String
+  documentVersionId String?
+  signerId          String
+  signatureData     Json // JSON con los datos de la firma/validación de Firma Perú
+  certificateData   Json // JSON con los datos del certificado
+  timestamp         DateTime  @default(now())
+  isValid           Boolean   @default(true)
+  status            String    @default("PENDING") // PENDING, VALID, INVALID, INDETERMINATE
+  observations      String    @db.Text // Observaciones de la validación como string JSON
+  isReverted        Boolean   @default(false)
+  revertedAt        DateTime?
+  revertedBy        String?
+  revertReason      String?   @db.Text
+  createdAt         DateTime  @default(now())
 
   document       Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
   version        DocumentVersion? @relation(fields: [documentVersionId], references: [id])
@@ -240,13 +240,13 @@ model SignatureFlow {
 }
 
 model Expediente {
-  id          String     @id @default(uuid())
-  code        String     @unique
+  id          String   @id @default(uuid())
+  code        String   @unique
   name        String
-  description String?    @db.Text
+  description String?  @db.Text
   createdBy   String
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   creator   User       @relation("ExpedienteCreator", fields: [createdBy], references: [id])
   documents Document[]
@@ -362,24 +362,24 @@ model Notification {
 }
 
 model BackupJob {
-  id                String   @id @default(uuid())
-  status            String   @default("PENDING") // PENDING, RUNNING, COMPLETED, FAILED
-  startedAt         DateTime?
-  completedAt       DateTime?
-  totalSize         Int      @default(0) // bytes
-  recordCount       Int      @default(0)
-  fileCount         Int      @default(0)
-  packagePath       String?
-  manifestPath      String?
-  errorMessage      String?  @db.Text
-  createdBy         String
-  ipAddress         String
-  userAgent         String   @db.Text
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id           String    @id @default(uuid())
+  status       String    @default("PENDING") // PENDING, RUNNING, COMPLETED, FAILED
+  startedAt    DateTime?
+  completedAt  DateTime?
+  totalSize    Int       @default(0) // bytes
+  recordCount  Int       @default(0)
+  fileCount    Int       @default(0)
+  packagePath  String?
+  manifestPath String?
+  errorMessage String?   @db.Text
+  createdBy    String
+  ipAddress    String
+  userAgent    String    @db.Text
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  creator       User         @relation("BackupJobCreator", fields: [createdBy], references: [id])
-  backupItems   BackupItem[]
+  creator     User         @relation("BackupJobCreator", fields: [createdBy], references: [id])
+  backupItems BackupItem[]
 
   @@index([status])
   @@index([createdBy])
@@ -388,15 +388,15 @@ model BackupJob {
 }
 
 model BackupItem {
-  id           String   @id @default(uuid())
-  backupJobId  String
-  itemType     String   // DB_RECORD, PDF_FILE
-  entityType   String   // Document, DocumentVersion, Signature, etc.
-  sourceId     String   // ID original de la entidad
-  fileHash     String?  // SHA-256 hash del archivo (para PDFs)
-  filePath     String?  // Ruta relativa dentro del paquete
-  metadata     Json?    // Metadatos adicionales
-  createdAt    DateTime @default(now())
+  id          String   @id @default(uuid())
+  backupJobId String
+  itemType    String // DB_RECORD, PDF_FILE
+  entityType  String // Document, DocumentVersion, Signature, etc.
+  sourceId    String // ID original de la entidad
+  fileHash    String? // SHA-256 hash del archivo (para PDFs)
+  filePath    String? // Ruta relativa dentro del paquete
+  metadata    Json? // Metadatos adicionales
+  createdAt   DateTime @default(now())
 
   backupJob BackupJob @relation(fields: [backupJobId], references: [id], onDelete: Cascade)
 
@@ -420,8 +420,8 @@ model BackupRestoreLog {
   restoredFiles   Int       @default(0)
   skippedFiles    Int       @default(0) // Archivos que ya existían con mismo hash
   errorMessage    String?   @db.Text
-  validationLog   Json?     // Resultados de validación del paquete
-  restoreLog      Json?     // Log detallado de operaciones de restauración
+  validationLog   Json? // Resultados de validación del paquete
+  restoreLog      Json? // Log detallado de operaciones de restauración
   createdBy       String
   ipAddress       String
   userAgent       String    @db.Text

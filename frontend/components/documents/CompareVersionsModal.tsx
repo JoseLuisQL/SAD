@@ -109,15 +109,29 @@ export function CompareVersionsModal({
       const response = await api.get(`/versions/${versionId}/download`, {
         responseType: 'blob'
       });
-      
+
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', fileName);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+
+      // Safely append, click, and remove
+      if (document.body) {
+        document.body.appendChild(link);
+        link.click();
+
+        // Use setTimeout to ensure click completes before removal
+        setTimeout(() => {
+          try {
+            if (link.parentNode && document.contains(link)) {
+              link.parentNode.removeChild(link);
+            }
+            window.URL.revokeObjectURL(url);
+          } catch (cleanupError) {
+            console.debug('Download cleanup skipped:', cleanupError);
+          }
+        }, 100);
+      }
 
       toast.success('Versión descargada correctamente');
     } catch (error: unknown) {

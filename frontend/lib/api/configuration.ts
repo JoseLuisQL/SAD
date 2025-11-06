@@ -65,16 +65,7 @@ export const configurationApi = {
     return api.delete<SystemConfigResponse>(`/configuration/login-background/${slot}`);
   },
 
-  updateExternalUrls: (data: {
-    logoUrl?: string | null;
-    faviconUrl?: string | null;
-    stampUrl?: string | null;
-    loginBg1Url?: string | null;
-    loginBg2Url?: string | null;
-    loginBg3Url?: string | null;
-    loginBg4Url?: string | null;
-    loginBg5Url?: string | null;
-  }) => {
+  updateExternalUrls: (data: { logoUrl?: string | null; faviconUrl?: string | null; stampUrl?: string | null }) => {
     return api.put<SystemConfigResponse>('/configuration/external-urls', data);
   },
 };

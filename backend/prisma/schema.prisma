@@ -290,46 +290,41 @@ model SystemConfig {
   websiteUrl            String?
   primaryColor          String?
   accentColor           String?
+  logoUrl               String?
   logoFileName          String?
   logoFilePath          String?
   logoMimeType          String?
   logoFileSize          Int?
-  logoUrl               String?  // URL externa para logo
+  faviconUrl            String?
   faviconFileName       String?
   faviconFilePath       String?
   faviconMimeType       String?
   faviconFileSize       Int?
-  faviconUrl            String?  // URL externa para favicon
+  stampUrl              String?
   stampFileName         String?
   stampFilePath         String?
   stampMimeType         String?
   stampFileSize         Int?
-  stampUrl              String?  // URL externa para stamp
   loginBg1FileName      String?
   loginBg1FilePath      String?
   loginBg1MimeType      String?
   loginBg1FileSize      Int?
-  loginBg1Url           String?  // URL externa para background 1
   loginBg2FileName      String?
   loginBg2FilePath      String?
   loginBg2MimeType      String?
   loginBg2FileSize      Int?
-  loginBg2Url           String?  // URL externa para background 2
   loginBg3FileName      String?
   loginBg3FilePath      String?
   loginBg3MimeType      String?
   loginBg3FileSize      Int?
-  loginBg3Url           String?  // URL externa para background 3
   loginBg4FileName      String?
   loginBg4FilePath      String?
   loginBg4MimeType      String?
   loginBg4FileSize      Int?
-  loginBg4Url           String?  // URL externa para background 4
   loginBg5FileName      String?
   loginBg5FilePath      String?
   loginBg5MimeType      String?
   loginBg5FileSize      Int?
-  loginBg5Url           String?  // URL externa para background 5
   signatureStampEnabled Boolean  @default(true)
   maintenanceMode       Boolean  @default(false)
   updatedBy             String?

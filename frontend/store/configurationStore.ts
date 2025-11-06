@@ -13,6 +13,7 @@ interface ConfigurationState {
   saveGeneral: (data: UpdateGeneralConfigPayload) => Promise<void>;
   uploadAsset: (type: AssetType, file: File) => Promise<void>;
   removeAsset: (type: AssetType) => Promise<void>;
+  updateExternalUrls: (data: { logoUrl?: string | null; faviconUrl?: string | null; stampUrl?: string | null }) => Promise<void>;
 }
 
 export const useConfigurationStore = create<ConfigurationState>((set) => ({
@@ -150,6 +151,27 @@ export const useConfigurationStore = create<ConfigurationState>((set) => ({
       toast.success(`${assetName} eliminado correctamente`);
     } catch (error) {
       const message = error instanceof Error ? error.message : `Error al eliminar ${type === 'logo' ? 'el logo' : 'el sello'}`;
+      set({ error: message, isLoading: false });
+      toast.error(message);
+      throw error;
+    }
+  },
+
+  updateExternalUrls: async (data: { logoUrl?: string | null; faviconUrl?: string | null; stampUrl?: string | null }) => {
+    try {
+      set({ isLoading: true, error: null });
+      
+      const response = await configurationApi.updateExternalUrls(data);
+      const config = response.data.data;
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('system_config', JSON.stringify(config));
+      }
+      set({ config, isLoading: false });
+
+      toast.success('URLs externas actualizadas correctamente');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error al actualizar URLs externas';
       set({ error: message, isLoading: false });
       toast.error(message);
       throw error;

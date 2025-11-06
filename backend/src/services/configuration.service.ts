@@ -32,6 +32,10 @@ interface SystemConfigDTO {
   signatureStampEnabled: boolean;
   maintenanceMode: boolean;
   updatedAt: Date;
+  // Flags para indicar si tiene archivo local (vs URL externa)
+  hasLocalLogo: boolean;
+  hasLocalFavicon: boolean;
+  hasLocalStamp: boolean;
 }
 
 interface UpdateGeneralConfigPayload {
@@ -45,17 +49,6 @@ interface UpdateGeneralConfigPayload {
   accentColor?: string;
   signatureStampEnabled?: boolean;
   maintenanceMode?: boolean;
-}
-
-interface UpdateExternalUrlsPayload {
-  logoUrl?: string | null;
-  faviconUrl?: string | null;
-  stampUrl?: string | null;
-  loginBg1Url?: string | null;
-  loginBg2Url?: string | null;
-  loginBg3Url?: string | null;
-  loginBg4Url?: string | null;
-  loginBg5Url?: string | null;
 }
 
 interface BrandAssetFiles {
@@ -103,26 +96,33 @@ const formatConfigDTO = (config: any, baseUrl: string): SystemConfigDTO => {
     loginBackgrounds,
     signatureStampEnabled: config.signatureStampEnabled,
     maintenanceMode: config.maintenanceMode,
-    updatedAt: config.updatedAt
+    updatedAt: config.updatedAt,
+    // Flags: tiene archivo local solo si NO tiene URL externa y SÍ tiene archivo
+    hasLocalLogo: !config.logoUrl && !!config.logoFilePath,
+    hasLocalFavicon: !config.faviconUrl && !!config.faviconFilePath,
+    hasLocalStamp: !config.stampUrl && !!config.stampFilePath
   };
 };
 
 export const getSystemConfig = async (req?: Request): Promise<SystemConfigDTO> => {
   const cached = cache.get<SystemConfigDTO>(CACHE_KEY);
-  
+
   if (cached) {
     return cached;
   }
 
-  const config = await prisma.systemConfig.findFirst({
-    orderBy: { createdAt: 'desc' }
-  });
+  // Usar SQL raw para asegurar que se seleccionen todas las columnas incluyendo logoUrl, faviconUrl, stampUrl
+  const configs = await prisma.$queryRaw<any[]>`
+    SELECT * FROM system_config ORDER BY createdAt DESC LIMIT 1
+  `;
 
-  const baseUrl = req 
+  const config = configs.length > 0 ? configs[0] : null;
+
+  const baseUrl = req
     ? `${req.protocol}://${req.get('host')}`
     : process.env.BACKEND_URL || 'http://localhost:4000';
 
-  const dto = config 
+  const dto = config
     ? formatConfigDTO(config, baseUrl)
     : {
         id: '',
@@ -140,7 +140,10 @@ export const getSystemConfig = async (req?: Request): Promise<SystemConfigDTO> =
         loginBackgrounds: [],
         signatureStampEnabled: true,
         maintenanceMode: false,
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        hasLocalLogo: false,
+        hasLocalFavicon: false,
+        hasLocalStamp: false
       };
 
   cache.set(CACHE_KEY, dto, CACHE_TTL);
@@ -402,8 +405,14 @@ export const getStampAssetPath = async (): Promise<string | null> => {
   return config?.stampFilePath || null;
 };
 
-export const updateExternalUrls = async (
-  payload: UpdateExternalUrlsPayload,
+interface UpdateExternalImageUrlsPayload {
+  logoUrl?: string | null;
+  faviconUrl?: string | null;
+  stampUrl?: string | null;
+}
+
+export const updateExternalImageUrls = async (
+  payload: UpdateExternalImageUrlsPayload,
   userId: string,
   req?: Request
 ): Promise<SystemConfigDTO> => {
@@ -412,18 +421,76 @@ export const updateExternalUrls = async (
   });
 
   if (!existingConfig) {
-    throw new Error('No se encontró configuración del sistema');
+    throw new Error('No existe configuración del sistema. Por favor, cree una configuración primero.');
   }
 
-  const config = await prisma.systemConfig.update({
-    where: { id: existingConfig.id },
-    data: {
-      ...payload,
-      updatedBy: userId
-    }
-  });
+  // Usar SQL directo ya que el cliente Prisma tiene problemas con campos recién agregados
+  // MySQL usa ? como placeholders, no $1, $2, $3
+  const updates: string[] = [];
+  const values: any[] = [];
 
+  if (payload.logoUrl !== undefined) {
+    updates.push(`logoUrl = ?`);
+    values.push(payload.logoUrl || null);
+    // Si se establece una URL externa, limpiar el archivo local
+    if (payload.logoUrl) {
+      updates.push(`logoFilePath = NULL`);
+      updates.push(`logoFileName = NULL`);
+      updates.push(`logoMimeType = NULL`);
+      updates.push(`logoFileSize = NULL`);
+    }
+  }
+
+  if (payload.faviconUrl !== undefined) {
+    updates.push(`faviconUrl = ?`);
+    values.push(payload.faviconUrl || null);
+    // Si se establece una URL externa, limpiar el archivo local
+    if (payload.faviconUrl) {
+      updates.push(`faviconFilePath = NULL`);
+      updates.push(`faviconFileName = NULL`);
+      updates.push(`faviconMimeType = NULL`);
+      updates.push(`faviconFileSize = NULL`);
+    }
+  }
+
+  if (payload.stampUrl !== undefined) {
+    updates.push(`stampUrl = ?`);
+    values.push(payload.stampUrl || null);
+    // Si se establece una URL externa, limpiar el archivo local
+    if (payload.stampUrl) {
+      updates.push(`stampFilePath = NULL`);
+      updates.push(`stampFileName = NULL`);
+      updates.push(`stampMimeType = NULL`);
+      updates.push(`stampFileSize = NULL`);
+    }
+  }
+
+  // Siempre actualizar updatedAt y updatedBy
+  updates.push(`updatedAt = NOW()`);
+  updates.push(`updatedBy = ?`);
+  values.push(userId);
+
+  if (updates.length > 0) {
+    const query = `UPDATE system_config SET ${updates.join(', ')} WHERE id = ?`;
+    values.push(existingConfig.id);
+    
+    await prisma.$executeRawUnsafe(query, ...values);
+  }
+
+  // Limpiar cache ANTES de obtener los datos actualizados
   cache.delete(CACHE_KEY);
+
+  // Obtener la configuración actualizada usando SQL directo para asegurar datos frescos
+  const configResult = await prisma.$queryRawUnsafe<any[]>(
+    'SELECT * FROM system_config WHERE id = ? LIMIT 1',
+    existingConfig.id
+  );
+
+  if (!configResult || configResult.length === 0) {
+    throw new Error('Error al actualizar la configuración');
+  }
+
+  const config = configResult[0];
 
   await auditService.log({
     userId,
@@ -432,14 +499,14 @@ export const updateExternalUrls = async (
     entityType: 'SystemConfig',
     entityId: config.id,
     oldValue: existingConfig,
-    newValue: config,
+    newValue: payload,
     req
   });
 
   const baseUrl = req 
     ? `${req.protocol}://${req.get('host')}`
     : process.env.BACKEND_URL || 'http://localhost:4000';
-  
+
   return formatConfigDTO(config, baseUrl);
 };
 
@@ -450,5 +517,5 @@ export default {
   removeBrandAsset,
   getStampAssetUrl,
   getStampAssetPath,
-  updateExternalUrls
+  updateExternalImageUrls
 };

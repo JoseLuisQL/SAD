@@ -17,7 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { BrandingAssetsSection } from '@/components/configuration/BrandingAssetsSection';
-import { ExternalUrlsSection } from '@/components/configuration/ExternalUrlsSection';
+import { ExternalUrlInput } from '@/components/configuration/ExternalUrlInput';
 
 const generalConfigSchema = z.object({
   companyName: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
@@ -35,7 +35,7 @@ const generalConfigSchema = z.object({
 type GeneralConfigForm = z.infer<typeof generalConfigSchema>;
 
 export default function ConfiguracionPage() {
-  const { config, isLoading, fetchConfig, saveGeneral, uploadAsset, removeAsset } = useConfigurationStore();
+  const { config, isLoading, fetchConfig, saveGeneral, uploadAsset, removeAsset, updateExternalUrls } = useConfigurationStore();
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
@@ -43,6 +43,10 @@ export default function ConfiguracionPage() {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
   const stampInputRef = useRef<HTMLInputElement>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [faviconUrl, setFaviconUrl] = useState<string | null>(null);
+  const [stampUrl, setStampUrl] = useState<string | null>(null);
+  const [urlsChanged, setUrlsChanged] = useState(false);
 
   const {
     register,
@@ -88,6 +92,17 @@ export default function ConfiguracionPage() {
         signatureStampEnabled: config.signatureStampEnabled,
         maintenanceMode: config.maintenanceMode,
       });
+      
+      // Extraer URLs externas de la configuración (solo si NO tiene archivo local)
+      // Si hasLocalLogo es false, significa que usa URL externa
+      const extractedLogoUrl = !config.hasLocalLogo && config.logoUrl ? config.logoUrl : null;
+      const extractedFaviconUrl = !config.hasLocalFavicon && config.faviconUrl ? config.faviconUrl : null;
+      const extractedStampUrl = !config.hasLocalStamp && config.stampUrl ? config.stampUrl : null;
+
+      setLogoUrl(extractedLogoUrl);
+      setFaviconUrl(extractedFaviconUrl);
+      setStampUrl(extractedStampUrl);
+      setUrlsChanged(false);
     }
   }, [config, reset]);
 
@@ -202,6 +217,36 @@ export default function ConfiguracionPage() {
     if (!confirm('¿Está seguro de eliminar el sello de firma?')) return;
     await removeAsset('stamp');
   };
+
+  const handleUrlChange = (type: 'logo' | 'favicon' | 'stamp', url: string | null) => {
+    if (type === 'logo') {
+      setLogoUrl(url);
+    } else if (type === 'favicon') {
+      setFaviconUrl(url);
+    } else if (type === 'stamp') {
+      setStampUrl(url);
+    }
+    setUrlsChanged(true);
+  };
+
+  const handleSaveUrls = async () => {
+    try {
+      setIsSaving(true);
+      await updateExternalUrls({
+        logoUrl,
+        faviconUrl,
+        stampUrl
+      });
+      setUrlsChanged(false);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Usar las propiedades hasLocal* del backend en lugar de calcularlas
+  const hasLocalLogo = config?.hasLocalLogo ?? false;
+  const hasLocalFavicon = config?.hasLocalFavicon ?? false;
+  const hasLocalStamp = config?.hasLocalStamp ?? false;
 
   if (isLoading && !config) {
     return (
@@ -481,6 +526,18 @@ export default function ConfiguracionPage() {
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Formatos: PNG, JPG, SVG, WebP • Tamaño máximo: 5MB
               </p>
+
+              <Separator />
+
+              <ExternalUrlInput
+                label="URL Externa del Logo"
+                description="Ingrese una URL externa si desea usar una imagen alojada en otro servidor"
+                value={logoUrl}
+                disabled={hasLocalLogo}
+                hasLocalImage={hasLocalLogo}
+                onChange={(url) => handleUrlChange('logo', url)}
+                type="logo"
+              />
             </div>
           </Card>
 
@@ -552,6 +609,18 @@ export default function ConfiguracionPage() {
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Formatos: PNG, JPG, SVG, WebP • Tamaño máximo: 5MB
               </p>
+
+              <Separator />
+
+              <ExternalUrlInput
+                label="URL Externa del Sello"
+                description="Ingrese una URL externa si desea usar una imagen alojada en otro servidor"
+                value={stampUrl}
+                disabled={hasLocalStamp}
+                hasLocalImage={hasLocalStamp}
+                onChange={(url) => handleUrlChange('stamp', url)}
+                type="stamp"
+              />
             </div>
           </Card>
 
@@ -623,12 +692,35 @@ export default function ConfiguracionPage() {
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Formatos: PNG, ICO • Tamaño máximo: 1MB • Recomendado: 32x32px o 16x16px
               </p>
+
+              <Separator />
+
+              <ExternalUrlInput
+                label="URL Externa del Favicon"
+                description="Ingrese una URL externa si desea usar una imagen alojada en otro servidor"
+                value={faviconUrl}
+                disabled={hasLocalFavicon}
+                hasLocalImage={hasLocalFavicon}
+                onChange={(url) => handleUrlChange('favicon', url)}
+                type="favicon"
+              />
             </div>
           </Card>
         </div>
 
-        {/* External URLs Section */}
-        <ExternalUrlsSection onUpdate={fetchConfig} />
+        {/* Save URLs Button */}
+        {urlsChanged && (
+          <div className="flex justify-end">
+            <Button
+              onClick={handleSaveUrls}
+              disabled={isSaving}
+              className="gap-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+            >
+              <Save className="w-4 h-4" />
+              {isSaving ? 'Guardando URLs...' : 'Guardar URLs Externas'}
+            </Button>
+          </div>
+        )}
 
         {/* Login Backgrounds Section */}
         <BrandingAssetsSection

@@ -43,28 +43,38 @@ export const useThemeStore = create<ThemeState>((set, get) => {
 
     setTheme: (theme: Theme) => {
       const resolvedTheme = resolveTheme(theme);
-      
+
       // Update localStorage
       if (typeof window !== 'undefined') {
-        localStorage.setItem(THEME_STORAGE_KEY, theme);
+        try {
+          localStorage.setItem(THEME_STORAGE_KEY, theme);
+        } catch (error) {
+          console.error('Error saving theme to localStorage:', error);
+        }
       }
 
       // Update state
       set({ theme, resolvedTheme });
 
-      // Apply to document
+      // Apply to document safely
       if (typeof document !== 'undefined') {
-        const root = document.documentElement;
-        root.classList.remove('light', 'dark');
-        root.classList.add(resolvedTheme);
-        
-        // Update meta theme-color for mobile browsers
-        const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-        if (metaThemeColor) {
-          metaThemeColor.setAttribute(
-            'content',
-            resolvedTheme === 'dark' ? '#171717' : '#ffffff'
-          );
+        try {
+          const root = document.documentElement;
+          if (root) {
+            root.classList.remove('light', 'dark');
+            root.classList.add(resolvedTheme);
+          }
+
+          // Update meta theme-color for mobile browsers
+          const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+          if (metaThemeColor) {
+            metaThemeColor.setAttribute(
+              'content',
+              resolvedTheme === 'dark' ? '#171717' : '#ffffff'
+            );
+          }
+        } catch (error) {
+          console.error('Error applying theme to document:', error);
         }
       }
     },

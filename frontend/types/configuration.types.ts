@@ -39,6 +39,9 @@ export interface SystemConfig {
   signatureStampEnabled: boolean;
   maintenanceMode: boolean;
   updatedAt: Date;
+  hasLocalLogo: boolean;
+  hasLocalFavicon: boolean;
+  hasLocalStamp: boolean;
 }
 
 export interface SystemConfigResponse {
