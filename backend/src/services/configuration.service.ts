@@ -436,7 +436,10 @@ export const updateExternalUrls = async (
     req
   });
 
-  const baseUrl = getBaseUrl(req);
+  const baseUrl = req 
+    ? `${req.protocol}://${req.get('host')}`
+    : process.env.BACKEND_URL || 'http://localhost:4000';
+  
   return formatConfigDTO(config, baseUrl);
 };
 
