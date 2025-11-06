@@ -47,6 +47,17 @@ interface UpdateGeneralConfigPayload {
   maintenanceMode?: boolean;
 }
 
+interface UpdateExternalUrlsPayload {
+  logoUrl?: string | null;
+  faviconUrl?: string | null;
+  stampUrl?: string | null;
+  loginBg1Url?: string | null;
+  loginBg2Url?: string | null;
+  loginBg3Url?: string | null;
+  loginBg4Url?: string | null;
+  loginBg5Url?: string | null;
+}
+
 interface BrandAssetFiles {
   logo?: Express.Multer.File;
   favicon?: Express.Multer.File;
@@ -64,8 +75,13 @@ const formatConfigDTO = (config: any, baseUrl: string): SystemConfigDTO => {
   const loginBackgrounds: string[] = [];
   
   for (let i = 1; i <= 5; i++) {
+    // Priorizar URL externa sobre archivo local
+    const bgUrl = config[`loginBg${i}Url`];
     const bgPath = config[`loginBg${i}FilePath`];
-    if (bgPath) {
+    
+    if (bgUrl) {
+      loginBackgrounds.push(bgUrl);
+    } else if (bgPath) {
       loginBackgrounds.push(`${baseUrl}/api/configuration/assets/${path.basename(bgPath)}`);
     }
   }
@@ -80,9 +96,10 @@ const formatConfigDTO = (config: any, baseUrl: string): SystemConfigDTO => {
     websiteUrl: config.websiteUrl,
     primaryColor: config.primaryColor,
     accentColor: config.accentColor,
-    logoUrl: config.logoFilePath ? `${baseUrl}/api/configuration/assets/${path.basename(config.logoFilePath)}` : null,
-    faviconUrl: config.faviconFilePath ? `${baseUrl}/api/configuration/assets/${path.basename(config.faviconFilePath)}` : null,
-    stampUrl: config.stampFilePath ? `${baseUrl}/api/configuration/assets/${path.basename(config.stampFilePath)}` : null,
+    // Priorizar URL externa sobre archivo local
+    logoUrl: config.logoUrl || (config.logoFilePath ? `${baseUrl}/api/configuration/assets/${path.basename(config.logoFilePath)}` : null),
+    faviconUrl: config.faviconUrl || (config.faviconFilePath ? `${baseUrl}/api/configuration/assets/${path.basename(config.faviconFilePath)}` : null),
+    stampUrl: config.stampUrl || (config.stampFilePath ? `${baseUrl}/api/configuration/assets/${path.basename(config.stampFilePath)}` : null),
     loginBackgrounds,
     signatureStampEnabled: config.signatureStampEnabled,
     maintenanceMode: config.maintenanceMode,
@@ -385,11 +402,50 @@ export const getStampAssetPath = async (): Promise<string | null> => {
   return config?.stampFilePath || null;
 };
 
+export const updateExternalUrls = async (
+  payload: UpdateExternalUrlsPayload,
+  userId: string,
+  req?: Request
+): Promise<SystemConfigDTO> => {
+  const existingConfig = await prisma.systemConfig.findFirst({
+    orderBy: { createdAt: 'desc' }
+  });
+
+  if (!existingConfig) {
+    throw new Error('No se encontró configuración del sistema');
+  }
+
+  const config = await prisma.systemConfig.update({
+    where: { id: existingConfig.id },
+    data: {
+      ...payload,
+      updatedBy: userId
+    }
+  });
+
+  cache.delete(CACHE_KEY);
+
+  await auditService.log({
+    userId,
+    action: 'EXTERNAL_URLS_UPDATED',
+    module: 'Configuration',
+    entityType: 'SystemConfig',
+    entityId: config.id,
+    oldValue: existingConfig,
+    newValue: config,
+    req
+  });
+
+  const baseUrl = getBaseUrl(req);
+  return formatConfigDTO(config, baseUrl);
+};
+
 export default {
   getSystemConfig,
   updateGeneralConfig,
   updateBrandAssets,
   removeBrandAsset,
   getStampAssetUrl,
-  getStampAssetPath
+  getStampAssetPath,
+  updateExternalUrls
 };

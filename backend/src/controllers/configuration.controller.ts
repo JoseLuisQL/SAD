@@ -362,6 +362,31 @@ export const removeLoginBackground = async (req: Request, res: Response): Promis
   }
 };
 
+export const updateExternalUrls = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        status: 'error',
+        message: 'Usuario no autenticado'
+      });
+      return;
+    }
+
+    const config = await configurationService.updateExternalUrls(req.body, req.user.id, req);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'URLs externas actualizadas correctamente',
+      data: config
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Error al actualizar URLs externas'
+    });
+  }
+};
+
 export default {
   getConfig,
   updateConfig,
@@ -372,5 +397,6 @@ export default {
   removeLogo,
   removeStamp,
   removeFavicon,
-  removeLoginBackground
+  removeLoginBackground,
+  updateExternalUrls
 };

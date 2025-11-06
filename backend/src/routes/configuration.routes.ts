@@ -75,4 +75,11 @@ router.delete(
   configurationController.removeLoginBackground
 );
 
+router.put(
+  '/external-urls',
+  authenticate,
+  authorize('Administrador'),
+  configurationController.updateExternalUrls
+);
+
 export default router;
