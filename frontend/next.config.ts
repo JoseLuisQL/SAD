@@ -2,13 +2,21 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  
+  // Optimización para producción
+  poweredByHeader: false,
+  compress: true,
+  
   experimental: {
     serverActions: {
       bodySizeLimit: '2mb',
     },
   },
+  
   images: {
+    formats: ['image/avif', 'image/webp'],
     remotePatterns: [
+      // Desarrollo local
       {
         protocol: 'http',
         hostname: 'localhost',
@@ -21,6 +29,7 @@ const nextConfig: NextConfig = {
         port: '4000',
         pathname: '/api/**',
       },
+      // Producción
       {
         protocol: 'http',
         hostname: 'archivos.risvirgendecocharcas.gob.pe',
@@ -31,26 +40,29 @@ const nextConfig: NextConfig = {
         hostname: 'archivos.risvirgendecocharcas.gob.pe',
         pathname: '/api/**',
       },
-      // Permitir imágenes externas de cualquier dominio HTTPS
+      // Permitir imágenes externas HTTPS
       {
         protocol: 'https',
         hostname: '**',
       },
-      // Permitir imágenes externas de cualquier dominio HTTP (solo para desarrollo)
-      {
-        protocol: 'http',
+      // HTTP solo en desarrollo
+      ...(process.env.NODE_ENV === 'development' ? [{
+        protocol: 'http' as const,
         hostname: '**',
-      },
+      }] : []),
     ],
   },
+  
   eslint: {
     ignoreDuringBuilds: true,
   },
+  
   typescript: {
     ignoreBuildErrors: true,
   },
+  
   webpack: (config) => {
-    // Ignore canvas module for react-pdf compatibility
+    // react-pdf compatibility
     config.resolve.alias.canvas = false;
     config.resolve.alias.encoding = false;
     return config;

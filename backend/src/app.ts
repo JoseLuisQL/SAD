@@ -61,6 +61,12 @@ app.use(cors({
       return callback(null, true);
     }
 
+    // Permitir peticiones desde red local (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+    const localNetworkRegex = /^http:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}):\d+$/;
+    if (localNetworkRegex.test(origin)) {
+      return callback(null, true);
+    }
+
     // Permitir dominios de Vercel en producción (*.vercel.app)
     if (process.env.NODE_ENV === 'production' && origin.endsWith('.vercel.app')) {
       return callback(null, true);
