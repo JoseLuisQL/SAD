@@ -120,29 +120,22 @@ const resources = [
     description: 'Guía detallada de todas las funcionalidades del sistema',
     type: 'document',
     icon: FileText,
-    url: '#',
+    url: 'https://drive.google.com/file/d/1tMmHcey2XE8I6NUnJFKYIwB-rwhRHHid/view?usp=drive_link',
   },
   {
-    title: 'Video: Introducción al SAD',
-    description: 'Video tutorial de 10 minutos sobre funciones básicas',
-    type: 'video',
-    icon: Video,
-    url: '#',
+    title: 'Software Firma Perú',
+    description: 'Descarga e instala el software de firma digital Firma Perú',
+    type: 'software',
+    icon: ExternalLink,
+    url: 'https://apps.firmaperu.gob.pe/web/firmador.xhtml',
   },
   {
-    title: 'Guía de Firma Digital',
-    description: 'Cómo configurar y utilizar la firma electrónica',
-    type: 'document',
-    icon: FileText,
-    url: '#',
-  },
-  {
-    title: 'Video: Gestión de Expedientes',
-    description: 'Tutorial paso a paso sobre expedientes',
-    type: 'video',
-    icon: Video,
-    url: '#',
-  },
+    title: 'Extensión EClickOnce launcher',
+    description: ' Extensión de Chrome para firmar documentos directamente desde el navegador',
+    type: 'extension',
+    icon: ExternalLink,
+    url: 'https://chromewebstore.google.com/detail/cegid-peoplenet-clickonce/jkncabbipkgbconhaajbapbhokpbgkdc?hl=es',
+  }
 ];
 
 // Mapeo de módulos de tours a módulos de permisos
