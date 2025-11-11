@@ -304,7 +304,7 @@ export default function CopiasPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" data-tour="copias-header">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Copias de Seguridad</h1>
           <p className="text-gray-600 dark:text-slate-400 mt-2">
@@ -324,7 +324,7 @@ export default function CopiasPage() {
             Actualizar
           </Button>
           {canManage && (
-            <Button onClick={() => setShowBackupDialog(true)}>
+            <Button onClick={() => setShowBackupDialog(true)} data-tour="copias-create-button">
               <Archive className="h-4 w-4 mr-2" />
               Generar Copia
             </Button>
@@ -333,6 +333,7 @@ export default function CopiasPage() {
             <Button
               variant="outline"
               onClick={() => setShowEmergencyRestoreDialog(true)}
+              data-tour="copias-restore"
             >
               <AlertTriangle className="h-4 w-4 mr-2" />
               Restauración de Emergencia
@@ -444,7 +445,7 @@ export default function CopiasPage() {
         </TabsList>
 
         <TabsContent value="backups" className="space-y-4">
-          <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
+          <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700" data-tour="copias-schedule">
             <CardHeader>
               <CardTitle className="text-gray-900 dark:text-white">Historial de Copias de Seguridad</CardTitle>
               <CardDescription className="text-gray-600 dark:text-slate-400">
@@ -461,7 +462,7 @@ export default function CopiasPage() {
                   No hay copias de seguridad disponibles
                 </div>
               ) : (
-                <>
+                <div data-tour="copias-table">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -471,7 +472,7 @@ export default function CopiasPage() {
                         <TableHead className="text-right">Registros</TableHead>
                         <TableHead className="text-right">Archivos</TableHead>
                         <TableHead className="text-right">Tamaño</TableHead>
-                        <TableHead className="text-right">Duración</TableHead>
+                        <TableHead>Duración</TableHead>
                         <TableHead className="text-right">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -580,7 +581,7 @@ export default function CopiasPage() {
                       </Button>
                     </div>
                   )}
-                </>
+                </div>
               )}
             </CardContent>
           </Card>

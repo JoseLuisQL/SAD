@@ -149,7 +149,7 @@ export default function RolesPage() {
             Administra los roles del sistema y sus permisos
           </p>
         </div>
-        <Button onClick={openCreateModal}>
+        <Button onClick={openCreateModal} data-tour="roles-create-button">
           <Plus className="mr-2 h-4 w-4" />
           Crear Rol
         </Button>
@@ -190,14 +190,18 @@ export default function RolesPage() {
               </CardContent>
             </Card>
           ) : (
-            <RolesTable
-              roles={roles}
-              onEdit={openEditModal}
-              onDelete={openDeleteDialog}
-              onViewPermissions={openViewPermissions}
-              onDuplicate={openDuplicateDialog}
-              onViewImpact={openImpactModal}
-            />
+            <div data-tour="roles-stats">
+              <div data-tour="roles-table">
+                <RolesTable
+                  roles={roles}
+                  onEdit={openEditModal}
+                  onDelete={openDeleteDialog}
+                  onViewPermissions={openViewPermissions}
+                  onDuplicate={openDuplicateDialog}
+                  onViewImpact={openImpactModal}
+                />
+              </div>
+            </div>
           )}
         </TabsContent>
 

@@ -170,19 +170,21 @@ export default function OficinasPage() {
             Administre las oficinas del sistema
           </p>
         </div>
-        <Button onClick={openCreateModal}>
+        <Button onClick={openCreateModal} data-tour="oficinas-create-button">
           <Plus className="mr-2 h-4 w-4" />
           Crear Oficina
         </Button>
       </div>
 
       {/* Estadísticas */}
-      <TypologyStats 
-        type="office" 
-        stats={stats} 
-        loading={statsLoading}
-        onRefresh={refreshStats}
-      />
+      <div data-tour="oficinas-stats">
+        <TypologyStats 
+          type="office" 
+          stats={stats} 
+          loading={statsLoading}
+          onRefresh={refreshStats}
+        />
+      </div>
 
       {/* Import/Export Panel */}
       <ImportExportPanel
@@ -192,7 +194,7 @@ export default function OficinasPage() {
       />
 
       {/* Filtros y búsqueda */}
-      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4" data-tour="oficinas-search">
         <div className="flex gap-4">
           <div className="flex-1">
             <Input
@@ -221,18 +223,20 @@ export default function OficinasPage() {
       </div>
 
       {/* Tabla con selección múltiple */}
-      <TypologyTable
-        type="office"
-        data={offices}
-        loading={loading}
-        selected={selected}
-        onSelect={toggleSelect}
-        onSelectAll={(ids) => toggleSelectAll(ids)}
-        onEdit={openEditModal}
-        onDelete={handleDelete}
-        onView={openDetailModal}
-        onBulkAction={handleBulkAction}
-      />
+      <div data-tour="oficinas-table">
+        <TypologyTable
+          type="office"
+          data={offices}
+          loading={loading}
+          selected={selected}
+          onSelect={toggleSelect}
+          onSelectAll={(ids) => toggleSelectAll(ids)}
+          onEdit={openEditModal}
+          onDelete={handleDelete}
+          onView={openDetailModal}
+          onBulkAction={handleBulkAction}
+        />
+      </div>
 
       {/* Paginación */}
       {pagination.totalPages > 1 && (

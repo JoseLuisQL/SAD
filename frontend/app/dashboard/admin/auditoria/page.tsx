@@ -76,7 +76,7 @@ export default function AuditoriaPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" data-tour="auditoria-header">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400" />
@@ -86,7 +86,7 @@ export default function AuditoriaPage() {
             Sistema avanzado de monitoreo, analytics y seguridad
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" data-tour="auditoria-export">
           <span className="text-xs text-gray-500 dark:text-slate-400">
             Última actualización: {lastUpdate.toLocaleTimeString()}
           </span>
@@ -97,7 +97,7 @@ export default function AuditoriaPage() {
         </div>
       </div>
 
-      <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 shadow-sm">
+      <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 shadow-sm" data-tour="auditoria-filters">
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 flex-1">
@@ -163,14 +163,16 @@ export default function AuditoriaPage() {
             loading={loading}
           />
 
-          <AuditTable
-            logs={logs}
-            loading={loading}
-            pagination={pagination}
-            onViewDetails={openDetailModal}
-            onPageChange={handlePageChange}
-            onLimitChange={handleLimitChange}
-          />
+          <div data-tour="auditoria-table">
+            <AuditTable
+              logs={logs}
+              loading={loading}
+              pagination={pagination}
+              onViewDetails={openDetailModal}
+              onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="anomalies" className="space-y-6">

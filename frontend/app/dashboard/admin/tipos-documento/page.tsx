@@ -172,19 +172,21 @@ export default function TiposDocumentoPage() {
             Administre los tipos de documento del sistema
           </p>
         </div>
-        <Button onClick={openCreateModal}>
+        <Button onClick={openCreateModal} data-tour="tipos-documento-create-button">
           <Plus className="mr-2 h-4 w-4" />
           Crear Tipo de Documento
         </Button>
       </div>
 
       {/* Estadísticas */}
-      <TypologyStats 
-        type="documentType" 
-        stats={stats} 
-        loading={statsLoading}
-        onRefresh={refreshStats}
-      />
+      <div data-tour="tipos-documento-stats">
+        <TypologyStats 
+          type="documentType" 
+          stats={stats} 
+          loading={statsLoading}
+          onRefresh={refreshStats}
+        />
+      </div>
 
       {/* Import/Export Panel */}
       <ImportExportPanel
@@ -194,7 +196,7 @@ export default function TiposDocumentoPage() {
       />
 
       {/* Filtros y búsqueda */}
-      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4" data-tour="tipos-documento-search">
         <div className="flex gap-4">
           <div className="flex-1">
             <Input
@@ -223,18 +225,20 @@ export default function TiposDocumentoPage() {
       </div>
 
       {/* Tabla con selección múltiple */}
-      <TypologyTable
-        type="documentType"
-        data={documentTypes}
-        loading={loading}
-        selected={selected}
-        onSelect={toggleSelect}
-        onSelectAll={(ids) => toggleSelectAll(ids)}
-        onEdit={openEditModal}
-        onDelete={handleDelete}
-        onView={openDetailModal}
-        onBulkAction={handleBulkAction}
-      />
+      <div data-tour="tipos-documento-table">
+        <TypologyTable
+          type="documentType"
+          data={documentTypes}
+          loading={loading}
+          selected={selected}
+          onSelect={toggleSelect}
+          onSelectAll={(ids) => toggleSelectAll(ids)}
+          onEdit={openEditModal}
+          onDelete={handleDelete}
+          onView={openDetailModal}
+          onBulkAction={handleBulkAction}
+        />
+      </div>
 
       {/* Paginación */}
       {pagination.totalPages > 1 && (

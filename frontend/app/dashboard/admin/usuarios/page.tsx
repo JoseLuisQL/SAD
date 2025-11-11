@@ -132,13 +132,15 @@ export default function UsuariosPage() {
             Administre los usuarios del sistema y sus permisos
           </p>
         </div>
-        <Button onClick={openCreateModal}>
+        <Button onClick={openCreateModal} data-tour="usuarios-create-button">
           <UserPlus className="mr-2 h-4 w-4" />
           Crear Usuario
         </Button>
       </div>
 
-      <UsersStats stats={stats} />
+      <div data-tour="usuarios-stats">
+        <UsersStats stats={stats} />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
@@ -167,18 +169,22 @@ export default function UsuariosPage() {
         </div>
       </div>
 
-      <UsersFilters onFilter={handleFilter} />
+      <div data-tour="usuarios-search">
+        <UsersFilters onFilter={handleFilter} />
+      </div>
 
-      <UsersTable
-        users={users}
-        loading={loading}
-        pagination={pagination}
-        onEdit={openEditModal}
-        onDelete={openDeleteDialog}
-        onViewDetails={openDetailModal}
-        onPageChange={handlePageChange}
-        onLimitChange={handleLimitChange}
-      />
+      <div data-tour="usuarios-table">
+        <UsersTable
+          users={users}
+          loading={loading}
+          pagination={pagination}
+          onEdit={openEditModal}
+          onDelete={openDeleteDialog}
+          onViewDetails={openDetailModal}
+          onPageChange={handlePageChange}
+          onLimitChange={handleLimitChange}
+        />
+      </div>
 
       <UserModal
         open={modalOpen}

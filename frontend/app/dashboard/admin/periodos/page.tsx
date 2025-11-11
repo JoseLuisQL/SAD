@@ -181,19 +181,21 @@ export default function PeriodosPage() {
             Administre los periodos fiscales del sistema
           </p>
         </div>
-        <Button onClick={openCreateModal}>
+        <Button onClick={openCreateModal} data-tour="periodos-create-button">
           <Plus className="mr-2 h-4 w-4" />
           Crear Periodo
         </Button>
       </div>
 
       {/* Estadísticas */}
-      <TypologyStats 
-        type="period" 
-        stats={stats} 
-        loading={statsLoading}
-        onRefresh={refreshStats}
-      />
+      <div data-tour="periodos-stats">
+        <TypologyStats 
+          type="period" 
+          stats={stats} 
+          loading={statsLoading}
+          onRefresh={refreshStats}
+        />
+      </div>
 
       {/* Import/Export Panel */}
       <ImportExportPanel
@@ -202,18 +204,22 @@ export default function PeriodosPage() {
       />
 
       {/* Tabla con selección múltiple */}
-      <TypologyTable
-        type="period"
-        data={periods}
-        loading={loading}
-        selected={selected}
-        onSelect={toggleSelect}
-        onSelectAll={(ids) => toggleSelectAll(ids)}
-        onEdit={openEditModal}
-        onDelete={handleDelete}
-        onView={openDetailModal}
-        onBulkAction={handleBulkAction}
-      />
+      <div data-tour="periodos-search">
+        <div data-tour="periodos-table">
+          <TypologyTable
+            type="period"
+            data={periods}
+            loading={loading}
+            selected={selected}
+            onSelect={toggleSelect}
+            onSelectAll={(ids) => toggleSelectAll(ids)}
+            onEdit={openEditModal}
+            onDelete={handleDelete}
+            onView={openDetailModal}
+            onBulkAction={handleBulkAction}
+          />
+        </div>
+      </div>
 
       {/* Modal de Crear/Editar */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>

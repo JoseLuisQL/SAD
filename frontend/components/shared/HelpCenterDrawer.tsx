@@ -141,13 +141,20 @@ const resources = [
 // Mapeo de módulos de tours a módulos de permisos
 const TOUR_PERMISSION_MAP: Record<string, string> = {
   'general': 'analytics',
+  'busqueda': 'search',
   'archivadores': 'archivadores',
   'documentos': 'documents',
   'expedientes': 'expedientes',
   'firma': 'signing',
   'reportes': 'reports',
   'usuarios': 'users',
+  'oficinas': 'offices',
+  'tipos-documento': 'documentTypes',
+  'periodos': 'periods',
+  'auditoria': 'audit',
   'roles': 'roles',
+  'configuracion': 'configuration',
+  'copias-seguridad': 'security',
 };
 
 export function HelpCenterDrawer({ isOpen, onClose }: HelpCenterDrawerProps) {
@@ -195,8 +202,10 @@ export function HelpCenterDrawer({ isOpen, onClose }: HelpCenterDrawerProps) {
     return searchGlossary(searchQuery);
   }, [searchQuery]);
 
-  // Filtrar tours según permisos del usuario
+  // Filtrar tours según permisos del usuario y búsqueda
   const filteredTours = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
+    
     return Object.values(tours)
       .filter((tour) => {
         // Excluir tours específicos que no queremos mostrar
@@ -214,9 +223,22 @@ export function HelpCenterDrawer({ isOpen, onClose }: HelpCenterDrawerProps) {
         }
         
         // Verificar si el usuario tiene acceso al módulo
-        return hasModule(permissionModule as any);
+        if (!hasModule(permissionModule as any)) {
+          return false;
+        }
+
+        // Si hay búsqueda, filtrar por nombre, descripción o módulo
+        if (query) {
+          const matchesName = tour.name.toLowerCase().includes(query);
+          const matchesDescription = tour.description.toLowerCase().includes(query);
+          const matchesModule = tour.module.toLowerCase().includes(query);
+          
+          return matchesName || matchesDescription || matchesModule;
+        }
+        
+        return true;
       });
-  }, [hasModule]);
+  }, [hasModule, searchQuery]);
 
   const handleStartTour = (tourId: string) => {
     // Verificar permisos antes de iniciar el tour
@@ -234,20 +256,35 @@ export function HelpCenterDrawer({ isOpen, onClose }: HelpCenterDrawerProps) {
 
     // Map tours to their required routes
     const tourRoutes: Record<string, string> = {
+      // Principal
       'general-tour': '/dashboard',
+      // Consultas
+      'busqueda-tour': '/dashboard/consultas/busqueda',
+      // Archivo Digital
       'archivadores-tour': '/dashboard/archivo/archivadores',
       'documentos-tour': '/dashboard/archivo/documentos',
       'expedientes-tour': '/dashboard/archivo/expedientes',
-      'busqueda-tour': '/dashboard/consultas/busqueda',
+      // Firma Digital
       'firma-firmar-tour': '/dashboard/firma/firmar',
       'firma-flujos-tour': '/dashboard/firma/flujos',
       'firma-validar-tour': '/dashboard/firma/validar',
       'firma-analytics-tour': '/dashboard/firma/analytics',
+      // Reportes
       'reportes-intro-tour': '/dashboard/reportes',
       'reportes-documentos-tour': '/dashboard/reportes',
       'reportes-actividad-tour': '/dashboard/reportes',
       'reportes-firmas-tour': '/dashboard/reportes',
+      // Administración
+      'usuarios-tour': '/dashboard/admin/usuarios',
+      'oficinas-tour': '/dashboard/admin/oficinas',
+      'tipos-documento-tour': '/dashboard/admin/tipos-documento',
+      'periodos-tour': '/dashboard/admin/periodos',
+      'auditoria-tour': '/dashboard/admin/auditoria',
+      // Configuración
+      'roles-tour': '/dashboard/roles',
       'configuracion-tour': '/dashboard/configuracion',
+      // Seguridad
+      'copias-seguridad-tour': '/dashboard/seguridad/copias',
     };
     
     const requiredRoute = tourRoutes[tourId];

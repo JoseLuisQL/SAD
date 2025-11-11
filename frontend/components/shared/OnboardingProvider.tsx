@@ -64,17 +64,32 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     }
 
     const routeToTourMap: Record<string, string> = {
+      // Principal
+      '/dashboard': 'general-tour',
+      // Consultas
+      '/dashboard/consultas/busqueda': 'busqueda-tour',
+      // Archivo Digital
       '/dashboard/archivo/archivadores': 'archivadores-tour',
       '/dashboard/archivo/documentos': 'documentos-tour',
       '/dashboard/archivo/expedientes': 'expedientes-tour',
-      '/dashboard/consultas/busqueda': 'busqueda-tour',
+      // Firma Digital
       '/dashboard/firma/firmar': 'firma-firmar-tour',
       '/dashboard/firma/flujos': 'firma-flujos-tour',
       '/dashboard/firma/validar': 'firma-validar-tour',
       '/dashboard/firma/analytics': 'firma-analytics-tour',
+      // Reportes
       '/dashboard/reportes': 'reportes-intro-tour',
+      // Administración
+      '/dashboard/admin/usuarios': 'usuarios-tour',
+      '/dashboard/admin/oficinas': 'oficinas-tour',
+      '/dashboard/admin/tipos-documento': 'tipos-documento-tour',
+      '/dashboard/admin/periodos': 'periodos-tour',
+      '/dashboard/admin/auditoria': 'auditoria-tour',
+      // Configuración
+      '/dashboard/roles': 'roles-tour',
       '/dashboard/configuracion': 'configuracion-tour',
-      '/dashboard': 'general-tour',
+      // Seguridad
+      '/dashboard/seguridad/copias': 'copias-seguridad-tour',
     };
 
     const tourId = routeToTourMap[pathname];
