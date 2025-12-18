@@ -4,21 +4,21 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Select } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CheckCircle2 } from 'lucide-react';
 import { useArchivadores } from '@/hooks/useArchivadores';
 import { useDocumentTypes } from '@/hooks/useDocumentTypes';
 import { useOffices } from '@/hooks/useOffices';
 import { DocumentMetadata } from '@/types/document.types';
+import { FieldWithHelp } from '@/components/shared/FieldWithHelp';
+import { cn } from '@/lib/utils';
 
 const documentMetadataSchema = z.object({
   archivadorId: z.string().min(1, 'Selecciona un archivador'),
   documentTypeId: z.string().min(1, 'Selecciona un tipo de documento'),
   officeId: z.string().min(1, 'Selecciona una oficina'),
-  documentNumber: z.string().min(1, 'Ingresa el número de documento'),
+  documentNumber: z.string().min(1, 'Ingresa el numero de documento'),
   documentDate: z.string().min(1, 'Ingresa la fecha del documento'),
   sender: z.string().min(1, 'Ingresa el remitente'),
   folioCount: z.number().int().positive('Debe ser mayor a 0'),
@@ -26,6 +26,17 @@ const documentMetadataSchema = z.object({
 });
 
 type MetadataFormData = z.infer<typeof documentMetadataSchema>;
+
+const fieldHelp = {
+  archivadorId: 'Carpeta fisica donde se guardara el documento original escaneado. Selecciona segun la clasificacion del archivo.',
+  documentTypeId: 'Categoria del documento: Oficio, Memorando, Resolucion, etc. Determina como se organiza en el sistema.',
+  officeId: 'Area o dependencia que emite o recibe el documento.',
+  documentNumber: 'Numero unico que identifica el documento. Ejemplo: OF-001-2025 o MEMO-123-2025.',
+  documentDate: 'Fecha en que se emitio el documento original (no la fecha de digitalizacion).',
+  sender: 'Persona, entidad o area que emite el documento.',
+  folioCount: 'Numero total de paginas del documento fisico. Debe coincidir con las paginas del PDF.',
+  annotations: 'Informacion adicional relevante sobre el documento (opcional).',
+};
 
 interface DocumentMetadataFormProps {
   onSubmit: (data: DocumentMetadata) => void;
@@ -49,11 +60,11 @@ export default function DocumentMetadataForm({
   const {
     register,
     handleSubmit,
-    formState: { errors },
-    setValue,
+    formState: { errors, isValid, dirtyFields },
     watch,
   } = useForm<MetadataFormData>({
     resolver: zodResolver(documentMetadataSchema),
+    mode: 'onChange',
     defaultValues: defaultValues ? {
       ...defaultValues,
       folioCount: defaultValues.folioCount || 1,
@@ -61,6 +72,14 @@ export default function DocumentMetadataForm({
       folioCount: 1,
     },
   });
+
+  const watchedFields = watch();
+  const totalFields = 7;
+  const completedFields = Object.keys(dirtyFields).filter(key => {
+    const value = watchedFields[key as keyof MetadataFormData];
+    return value !== undefined && value !== '' && value !== null;
+  }).length;
+  const progress = Math.round((completedFields / totalFields) * 100);
 
   useEffect(() => {
     fetchArchivadores({ limit: 100 });
@@ -72,149 +91,207 @@ export default function DocumentMetadataForm({
     onSubmit(data as DocumentMetadata);
   };
 
+  const selectClassName = cn(
+    'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground',
+    'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+    'disabled:cursor-not-allowed disabled:opacity-50'
+  );
+
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+      {/* Progress indicator */}
+      <div className="bg-gray-50 dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-gray-700 dark:text-slate-300">
+            Progreso del formulario
+          </span>
+          <span className="text-sm text-gray-500 dark:text-slate-400">
+            {completedFields} de {totalFields} campos
+          </span>
+        </div>
+        <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
+          <div
+            className={cn(
+              'h-2 rounded-full transition-all duration-300',
+              progress === 100 ? 'bg-green-500' : 'bg-blue-500'
+            )}
+            style={{ width: `${progress}%` }}
+            role="progressbar"
+            aria-valuenow={progress}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Formulario completado al ${progress}%`}
+          />
+        </div>
+        {progress === 100 && (
+          <p className="text-sm text-green-600 dark:text-green-400 mt-2 flex items-center gap-1">
+            <CheckCircle2 className="h-4 w-4" />
+            Todos los campos requeridos completados
+          </p>
+        )}
+      </div>
+
+      {/* Form fields */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <Label htmlFor="archivadorId" className="text-gray-900 dark:text-white font-semibold">
-            Archivador <span className="text-red-500">*</span>
-          </Label>
+        <FieldWithHelp
+          label="Archivador"
+          help={fieldHelp.archivadorId}
+          required
+          htmlFor="archivadorId"
+          error={errors.archivadorId?.message}
+        >
           <select
             id="archivadorId"
             {...register('archivadorId')}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className={selectClassName}
+            aria-invalid={!!errors.archivadorId}
+            aria-describedby={errors.archivadorId ? 'archivadorId-error' : undefined}
           >
-            <option value="">Selecciona un archivador</option>
+            <option value="">Selecciona un archivador...</option>
             {archivadores.map((archivador) => (
               <option key={archivador.id} value={archivador.id}>
                 {archivador.code} - {archivador.name}
               </option>
             ))}
           </select>
-          {errors.archivadorId && (
-            <p className="text-sm text-red-500">{errors.archivadorId.message}</p>
-          )}
-        </div>
+        </FieldWithHelp>
 
-        <div className="space-y-2">
-          <Label htmlFor="documentTypeId" className="text-gray-900 dark:text-white font-semibold">
-            Tipo de Documento <span className="text-red-500">*</span>
-          </Label>
+        <FieldWithHelp
+          label="Tipo de Documento"
+          help={fieldHelp.documentTypeId}
+          required
+          htmlFor="documentTypeId"
+          error={errors.documentTypeId?.message}
+        >
           <select
             id="documentTypeId"
             {...register('documentTypeId')}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className={selectClassName}
+            aria-invalid={!!errors.documentTypeId}
           >
-            <option value="">Selecciona un tipo</option>
+            <option value="">Selecciona un tipo...</option>
             {documentTypes.map((type) => (
               <option key={type.id} value={type.id}>
                 {type.name}
               </option>
             ))}
           </select>
-          {errors.documentTypeId && (
-            <p className="text-sm text-red-500">{errors.documentTypeId.message}</p>
-          )}
-        </div>
+        </FieldWithHelp>
 
-        <div className="space-y-2">
-          <Label htmlFor="officeId" className="text-gray-900 dark:text-white font-semibold">
-            Oficina <span className="text-red-500">*</span>
-          </Label>
+        <FieldWithHelp
+          label="Oficina"
+          help={fieldHelp.officeId}
+          required
+          htmlFor="officeId"
+          error={errors.officeId?.message}
+        >
           <select
             id="officeId"
             {...register('officeId')}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className={selectClassName}
+            aria-invalid={!!errors.officeId}
           >
-            <option value="">Selecciona una oficina</option>
+            <option value="">Selecciona una oficina...</option>
             {offices.map((office) => (
               <option key={office.id} value={office.id}>
                 {office.name}
               </option>
             ))}
           </select>
-          {errors.officeId && (
-            <p className="text-sm text-red-500">{errors.officeId.message}</p>
-          )}
-        </div>
+        </FieldWithHelp>
 
-        <div className="space-y-2">
-          <Label htmlFor="documentNumber" className="text-gray-900 dark:text-white font-semibold">
-            Número de Documento <span className="text-red-500">*</span>
-          </Label>
+        <FieldWithHelp
+          label="Numero de Documento"
+          help={fieldHelp.documentNumber}
+          required
+          htmlFor="documentNumber"
+          error={errors.documentNumber?.message}
+        >
           <Input
             id="documentNumber"
             {...register('documentNumber')}
-            placeholder="Ej: 001-2025"
+            placeholder="Ej: OF-001-2025"
+            aria-invalid={!!errors.documentNumber}
           />
-          {errors.documentNumber && (
-            <p className="text-sm text-red-500">{errors.documentNumber.message}</p>
-          )}
-        </div>
+        </FieldWithHelp>
 
-        <div className="space-y-2">
-          <Label htmlFor="documentDate" className="text-gray-900 dark:text-white font-semibold">
-            Fecha del Documento <span className="text-red-500">*</span>
-          </Label>
-          <Input id="documentDate" type="date" {...register('documentDate')} />
-          {errors.documentDate && (
-            <p className="text-sm text-red-500">{errors.documentDate.message}</p>
-          )}
-        </div>
+        <FieldWithHelp
+          label="Fecha del Documento"
+          help={fieldHelp.documentDate}
+          required
+          htmlFor="documentDate"
+          error={errors.documentDate?.message}
+        >
+          <Input 
+            id="documentDate" 
+            type="date" 
+            {...register('documentDate')}
+            aria-invalid={!!errors.documentDate}
+          />
+        </FieldWithHelp>
 
-        <div className="space-y-2">
-          <Label htmlFor="sender" className="text-gray-900 dark:text-white font-semibold">
-            Remitente <span className="text-red-500">*</span>
-          </Label>
+        <FieldWithHelp
+          label="Remitente"
+          help={fieldHelp.sender}
+          required
+          htmlFor="sender"
+          error={errors.sender?.message}
+        >
           <Input
             id="sender"
             {...register('sender')}
-            placeholder="Ej: Ministerio de Salud"
+            placeholder="Ej: Direccion Regional de Salud"
+            aria-invalid={!!errors.sender}
           />
-          {errors.sender && (
-            <p className="text-sm text-red-500">{errors.sender.message}</p>
-          )}
-        </div>
+        </FieldWithHelp>
 
-        <div className="space-y-2">
-          <Label htmlFor="folioCount" className="text-gray-900 dark:text-white font-semibold">
-            Número de Folios <span className="text-red-500">*</span>
-          </Label>
+        <FieldWithHelp
+          label="Numero de Folios"
+          help={fieldHelp.folioCount}
+          required
+          htmlFor="folioCount"
+          error={errors.folioCount?.message}
+        >
           <Input
             id="folioCount"
             type="number"
             {...register('folioCount', { valueAsNumber: true })}
             min="1"
             placeholder="1"
+            aria-invalid={!!errors.folioCount}
           />
-          {errors.folioCount && (
-            <p className="text-sm text-red-500">{errors.folioCount.message}</p>
-          )}
-        </div>
+        </FieldWithHelp>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="annotations" className="text-gray-900 dark:text-white font-semibold">Anotaciones (opcional)</Label>
+      <FieldWithHelp
+        label="Anotaciones"
+        help={fieldHelp.annotations}
+        htmlFor="annotations"
+        error={errors.annotations?.message}
+      >
         <textarea
           id="annotations"
           {...register('annotations')}
           rows={3}
-          className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          placeholder="Anotaciones adicionales (opcional)"
+          className={cn(
+            'flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground',
+            'ring-offset-background placeholder:text-muted-foreground',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+            'disabled:cursor-not-allowed disabled:opacity-50'
+          )}
+          placeholder="Informacion adicional sobre el documento (opcional)"
+          aria-invalid={!!errors.annotations}
         />
-        {errors.annotations && (
-          <p className="text-sm text-red-500">{errors.annotations.message}</p>
-        )}
-      </div>
+      </FieldWithHelp>
 
-      <div className="flex justify-end space-x-4">
+      <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200 dark:border-slate-700">
         {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancelar
           </Button>
         )}
-        <Button type="submit" disabled={loading}>
-          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        <Button type="submit" disabled={loading || !isValid}>
+          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
           {submitLabel}
         </Button>
       </div>

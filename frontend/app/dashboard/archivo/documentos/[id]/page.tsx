@@ -1,19 +1,55 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale/es';
-import { ArrowLeft, Download, Edit, Trash2, FileText, Calendar, User, Building2, Hash, FileDigit, RotateCcw, CheckCircle2, Clock, FileSignature } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Download, 
+  Edit, 
+  Trash2, 
+  FileText, 
+  Calendar, 
+  User, 
+  Building2, 
+  Hash, 
+  Layers,
+  FolderArchive,
+  HardDrive,
+  Clock,
+  RotateCcw, 
+  CheckCircle2, 
+  FileSignature,
+  AlertTriangle,
+  ChevronRight,
+  ChevronLeft,
+  MoreVertical
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Breadcrumb } from '@/components/ui/breadcrumb';
 import PDFPreview from '@/components/documents/PDFPreview';
+import { DocumentSummaryCard } from '@/components/documents/DocumentSummaryCard';
 import { VersionHistory } from '@/components/documents/VersionHistory';
 import { RevertSignatureModal } from '@/components/firma/RevertSignatureModal';
 import { CompareVersionsModal } from '@/components/documents/CompareVersionsModal';
-import { SignatureStatusBadge } from '@/components/shared/SignatureStatusBadge';
+import { InfoRow } from '@/components/shared/InfoRow';
 import { useDocuments } from '@/hooks/useDocuments';
 import { Document, Signature } from '@/types/document.types';
 import { documentsApi } from '@/lib/api/documents';
@@ -40,29 +76,68 @@ export default function DocumentDetailPage() {
   const { getDocumentById, downloadDocument, deleteDocument, loading } = useDocuments();
   const [document, setDocument] = useState<Document | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [pdfUrl, setPdfUrl] = useState<string>('');
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [activeTab, setActiveTab] = useState('info');
   
-  // Estados para firmas y versiones
   const [signatures, setSignatures] = useState<Signature[]>([]);
   const [canRevertSignatures, setCanRevertSignatures] = useState(false);
   const [showRevertModal, setShowRevertModal] = useState(false);
   const [showCompareModal, setShowCompareModal] = useState(false);
   const [compareVersions, setCompareVersions] = useState<[string, string] | null>(null);
   
-  // Calcular si es admin desde el usuario
-  // El usuario tiene roleName directamente, no user.role.name
-  const isAdmin = user?.roleName === 'Administrador';
+  const [infoSectionsOpen, setInfoSectionsOpen] = useState({
+    document: true,
+    location: true,
+    file: false,
+    audit: false,
+  });
+
+  const isAdmin = user?.role?.name === 'Administrador';
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'd') {
+          e.preventDefault();
+          handleDownload();
+        }
+        if (e.key === 'e') {
+          e.preventDefault();
+          router.push(`/dashboard/archivo/documentos/${documentId}/editar`);
+        }
+      }
+
+      if (e.key === 'Escape') {
+        router.back();
+      }
+
+      // Tab switching
+      if (e.key === '1') setActiveTab('info');
+      if (e.key === '2') setActiveTab('versions');
+      if (e.key === '3') setActiveTab('signatures');
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [documentId]);
 
   useEffect(() => {
     loadDocument();
     return () => {
-      // Cleanup: liberar el blob URL cuando se desmonte el componente
       if (pdfUrl) {
         URL.revokeObjectURL(pdfUrl);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [documentId]);
 
   useEffect(() => {
@@ -72,6 +147,7 @@ export default function DocumentDetailPage() {
         checkRevertPermission();
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [document, isAdmin]);
 
   const loadDocument = async () => {
@@ -95,9 +171,9 @@ export default function DocumentDetailPage() {
 
   const checkRevertPermission = async () => {
     try {
-      const response = await api.get(`/firma/revert/${documentId}/can-revert`);
+      const response = await api.get<{ status: string; data: { canRevert: boolean } }>(`/firma/revert/${documentId}/can-revert`);
       setCanRevertSignatures(response.data.data.canRevert);
-    } catch (error) {
+    } catch {
       setCanRevertSignatures(false);
     }
   };
@@ -105,11 +181,7 @@ export default function DocumentDetailPage() {
   const loadPdf = async (id: string) => {
     try {
       setLoadingPdf(true);
-      
-      // Usar la API que ya maneja la autenticación
       const response = await documentsApi.download(id);
-      
-      // response.data es el blob
       const blob = response.data as unknown as Blob;
       const url = URL.createObjectURL(blob);
       setPdfUrl(url);
@@ -120,14 +192,14 @@ export default function DocumentDetailPage() {
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = useCallback(() => {
     if (document) {
       downloadDocument(document.id, document.fileName);
     }
-  };
+  }, [document, downloadDocument]);
 
   const handleDelete = async () => {
-    if (document) {
+    if (document && deleteConfirmText === 'ELIMINAR') {
       await deleteDocument(document.id);
       router.push('/dashboard/archivo/documentos');
     }
@@ -143,210 +215,299 @@ export default function DocumentDetailPage() {
 
   if (loading || !document) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
+      <div className="flex flex-col items-center justify-center min-h-[60vh]" role="status" aria-label="Cargando documento">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mb-3"></div>
+        <p className="text-gray-500 dark:text-slate-400">Cargando documento...</p>
       </div>
     );
   }
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto max-w-[1920px]">
-      <div className="mb-6">
-        <Button variant="ghost" onClick={() => router.back()} className="mb-4 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Volver
-        </Button>
+    <div className="w-full max-w-[1920px] mx-auto">
+      {/* Skip links for accessibility */}
+      <a 
+        href="#pdf-viewer" 
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-white focus:p-2 focus:rounded focus:shadow-lg"
+      >
+        Ir al visor PDF
+      </a>
+      <a 
+        href="#document-details" 
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-white focus:p-2 focus:rounded focus:shadow-lg"
+      >
+        Ir a detalles del documento
+      </a>
+
+      {/* Header with Breadcrumb */}
+      <header className="mb-6" role="banner">
+        <div className="mb-4">
+          <Breadcrumb 
+            items={[
+              { label: 'Documentos', href: '/dashboard/archivo/documentos' },
+              { label: document.documentNumber, current: true },
+            ]}
+            showHome={false}
+          />
+        </div>
 
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
-          <div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Documento {document.documentNumber}</h1>
-              <SignatureStatusBadge status={document.signatureStatus || 'UNSIGNED'} />
+          <div className="flex items-start gap-4">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => router.back()} 
+              className="mt-1 text-gray-600 hover:text-gray-900 dark:text-slate-400 dark:hover:text-white"
+              aria-label="Volver a la pagina anterior"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 
+                id="document-title"
+                className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white"
+              >
+                {document.documentNumber}
+              </h1>
+              <p className="text-gray-600 dark:text-slate-400 mt-1">
+                {document.documentType.name} - {format(new Date(document.documentDate), 'dd/MM/yyyy', { locale: es })}
+              </p>
             </div>
-            <p className="text-slate-600 dark:text-slate-400 mt-2">
-              Creado el {format(new Date(document.createdAt), 'dd/MM/yyyy HH:mm', { locale: es })}
-            </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={handleDownload} className="border-slate-300 dark:border-slate-700 dark:hover:bg-slate-800">
-              <Download className="mr-2 h-4 w-4" />
+          {/* Actions - Desktop */}
+          <div className="hidden sm:flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleDownload}
+              aria-label="Descargar documento"
+            >
+              <Download className="mr-2 h-4 w-4" aria-hidden="true" />
               Descargar
             </Button>
-            <Button variant="outline" onClick={() => router.push(`/dashboard/archivo/documentos/${document.id}/editar`)} className="border-slate-300 dark:border-slate-700 dark:hover:bg-slate-800">
-              <Edit className="mr-2 h-4 w-4" />
+            <Button 
+              variant="outline" 
+              onClick={() => router.push(`/dashboard/archivo/documentos/${document.id}/editar`)}
+              aria-label="Editar documento"
+            >
+              <Edit className="mr-2 h-4 w-4" aria-hidden="true" />
               Editar
             </Button>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(true)} className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 border-red-300 hover:border-red-400 dark:border-red-800 dark:hover:border-red-700">
-              <Trash2 className="mr-2 h-4 w-4" />
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteDialog(true)}
+              className="text-red-600 hover:text-red-700 border-red-300 hover:border-red-400 dark:text-red-400 dark:border-red-800"
+              aria-label="Eliminar documento"
+            >
+              <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
               Eliminar
             </Button>
           </div>
-        </div>
-      </div>
 
+          {/* Actions - Mobile */}
+          <div className="sm:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" aria-label="Menu de acciones">
+                  <MoreVertical className="h-4 w-4 mr-2" />
+                  Acciones
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleDownload}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Descargar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push(`/dashboard/archivo/documentos/${document.id}/editar`)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="text-red-600 dark:text-red-400"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </header>
+
+      {/* Main content */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        <div className="xl:col-span-7">
-          <Card className="p-4 sm:p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm">
-            <h2 className="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Vista Previa</h2>
-            {loadingPdf ? (
-              <div className="flex justify-center items-center h-[600px]">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
-                  <p className="text-slate-600 dark:text-slate-400">Cargando documento...</p>
+        {/* PDF Preview - 8 columns */}
+        <div className="xl:col-span-8" id="pdf-viewer">
+          <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
+            <CardContent className="p-4">
+              {loadingPdf ? (
+                <div className="flex justify-center items-center h-[600px]" role="status">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 dark:border-blue-400"></div>
+                    <p className="text-gray-600 dark:text-slate-400">Cargando documento...</p>
+                  </div>
                 </div>
-              </div>
-            ) : pdfUrl ? (
-              <PDFPreview file={pdfUrl} />
-            ) : (
-              <div className="flex justify-center items-center h-[600px] bg-slate-50 dark:bg-slate-800 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700">
-                <div className="text-center">
-                  <FileText className="h-16 w-16 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-                  <p className="text-slate-500 dark:text-slate-400 font-medium">No se pudo cargar el PDF</p>
-                  <p className="text-slate-400 dark:text-slate-500 text-sm mt-1">Intente descargar el documento</p>
+              ) : pdfUrl ? (
+                <PDFPreview file={pdfUrl} />
+              ) : (
+                <div className="flex justify-center items-center h-[600px] bg-gray-50 dark:bg-slate-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-slate-700">
+                  <div className="text-center">
+                    <FileText className="h-16 w-16 text-gray-300 dark:text-slate-600 mx-auto mb-3" aria-hidden="true" />
+                    <p className="text-gray-500 dark:text-slate-400 font-medium">No se pudo cargar el PDF</p>
+                    <p className="text-gray-400 dark:text-slate-500 text-sm mt-1">Intente descargar el documento</p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </CardContent>
           </Card>
         </div>
 
-        <div className="xl:col-span-5 space-y-6">
+        {/* Sidebar - 4 columns */}
+        <div className="xl:col-span-4 space-y-6" id="document-details">
+          {/* Summary Card */}
+          <DocumentSummaryCard
+            documentNumber={document.documentNumber}
+            documentType={document.documentType.name}
+            signatureStatus={document.signatureStatus || 'UNSIGNED'}
+            ocrStatus={document.ocrStatus}
+            folioCount={document.folioCount}
+            currentVersion={document.currentVersion}
+            documentDate={document.documentDate}
+            signaturesCount={signatures.length}
+            onDownload={handleDownload}
+            onEdit={() => router.push(`/dashboard/archivo/documentos/${document.id}/editar`)}
+            onViewInfo={() => setActiveTab('info')}
+            onViewHistory={() => setActiveTab('versions')}
+          />
+
+          {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <TabsList className="grid w-full grid-cols-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
               <TabsTrigger 
                 value="info"
-                className="data-[state=active]:bg-slate-900 data-[state=active]:text-white dark:data-[state=active]:bg-slate-700 dark:text-slate-400 dark:data-[state=active]:text-white"
+                className="data-[state=active]:bg-gray-900 data-[state=active]:text-white dark:data-[state=active]:bg-slate-700"
+                aria-label="Informacion del documento"
               >
-                Información
+                Info
               </TabsTrigger>
               <TabsTrigger 
                 value="versions"
-                className="data-[state=active]:bg-slate-900 data-[state=active]:text-white dark:data-[state=active]:bg-slate-700 dark:text-slate-400 dark:data-[state=active]:text-white"
+                className="data-[state=active]:bg-gray-900 data-[state=active]:text-white dark:data-[state=active]:bg-slate-700"
+                aria-label="Historial de versiones"
               >
                 Historial
               </TabsTrigger>
               <TabsTrigger 
                 value="signatures"
-                className="data-[state=active]:bg-slate-900 data-[state=active]:text-white dark:data-[state=active]:bg-slate-700 dark:text-slate-400 dark:data-[state=active]:text-white"
+                className="data-[state=active]:bg-gray-900 data-[state=active]:text-white dark:data-[state=active]:bg-slate-700 relative"
+                aria-label="Firmas del documento"
               >
                 Firmas
+                {signatures.length > 0 && (
+                  <Badge className="ml-1.5 h-5 w-5 p-0 flex items-center justify-center text-xs bg-green-600">
+                    {signatures.length}
+                  </Badge>
+                )}
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="info" className="mt-6 space-y-4">
-              <Card className="p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm">
-                <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-                  Información del Documento
-                </h2>
+            {/* Tab: Info */}
+            <TabsContent value="info" className="mt-4">
+              <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
+                <CardContent className="p-4 space-y-0 divide-y divide-gray-100 dark:divide-slate-800">
+                  {/* Seccion Documento */}
+                  <Collapsible 
+                    open={infoSectionsOpen.document} 
+                    onOpenChange={(open) => setInfoSectionsOpen(prev => ({ ...prev, document: open }))}
+                  >
+                    <CollapsibleTrigger className="flex items-center justify-between w-full py-3 hover:bg-gray-50 dark:hover:bg-slate-800 -mx-4 px-4 rounded">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                        <span className="font-medium text-gray-900 dark:text-white">Documento</span>
+                      </div>
+                      <ChevronRight className={`h-4 w-4 text-gray-400 transition-transform ${infoSectionsOpen.document ? 'rotate-90' : ''}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-2 pb-3">
+                      <InfoRow label="Numero" value={document.documentNumber} icon={Hash} copyable />
+                      <InfoRow label="Fecha" value={format(new Date(document.documentDate), 'dd/MM/yyyy', { locale: es })} icon={Calendar} />
+                      <InfoRow label="Tipo" value={document.documentType.name} icon={FileText} />
+                      <InfoRow label="Remitente" value={document.sender} icon={User} copyable truncate />
+                      <InfoRow label="Folios" value={`${document.folioCount} pagina${document.folioCount > 1 ? 's' : ''}`} icon={Layers} />
+                    </CollapsibleContent>
+                  </Collapsible>
 
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <Hash className="w-5 h-5 text-slate-400 dark:text-slate-500 flex-shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Número de Documento</p>
-                  <p className="font-semibold text-slate-900 dark:text-white mt-0.5">{document.documentNumber}</p>
-                </div>
-              </div>
+                  {/* Seccion Ubicacion */}
+                  <Collapsible 
+                    open={infoSectionsOpen.location} 
+                    onOpenChange={(open) => setInfoSectionsOpen(prev => ({ ...prev, location: open }))}
+                  >
+                    <CollapsibleTrigger className="flex items-center justify-between w-full py-3 hover:bg-gray-50 dark:hover:bg-slate-800 -mx-4 px-4 rounded">
+                      <div className="flex items-center gap-2">
+                        <FolderArchive className="h-4 w-4 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+                        <span className="font-medium text-gray-900 dark:text-white">Ubicacion</span>
+                      </div>
+                      <ChevronRight className={`h-4 w-4 text-gray-400 transition-transform ${infoSectionsOpen.location ? 'rotate-90' : ''}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-2 pb-3">
+                      <InfoRow label="Archivador" value={`${document.archivador.code} - ${document.archivador.name}`} icon={FolderArchive} />
+                      <InfoRow label="Oficina" value={document.office.name} icon={Building2} />
+                    </CollapsibleContent>
+                  </Collapsible>
 
-              <div className="flex items-start gap-3">
-                <Calendar className="w-5 h-5 text-slate-400 dark:text-slate-500 flex-shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Fecha del Documento</p>
-                  <p className="font-semibold text-slate-900 dark:text-white mt-0.5">
-                    {format(new Date(document.documentDate), 'dd/MM/yyyy', { locale: es })}
-                  </p>
-                </div>
-              </div>
+                  {/* Seccion Archivo */}
+                  <Collapsible 
+                    open={infoSectionsOpen.file} 
+                    onOpenChange={(open) => setInfoSectionsOpen(prev => ({ ...prev, file: open }))}
+                  >
+                    <CollapsibleTrigger className="flex items-center justify-between w-full py-3 hover:bg-gray-50 dark:hover:bg-slate-800 -mx-4 px-4 rounded">
+                      <div className="flex items-center gap-2">
+                        <HardDrive className="h-4 w-4 text-purple-600 dark:text-purple-400" aria-hidden="true" />
+                        <span className="font-medium text-gray-900 dark:text-white">Archivo Digital</span>
+                      </div>
+                      <ChevronRight className={`h-4 w-4 text-gray-400 transition-transform ${infoSectionsOpen.file ? 'rotate-90' : ''}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-2 pb-3">
+                      <InfoRow label="Nombre" value={document.fileName} icon={FileText} copyable truncate />
+                      <InfoRow label="Tamano" value={formatFileSize(document.fileSize)} icon={HardDrive} />
+                      <InfoRow label="Version" value={`v${document.currentVersion}`} icon={Layers} />
+                    </CollapsibleContent>
+                  </Collapsible>
 
-              <div className="flex items-start gap-3">
-                <FileText className="w-5 h-5 text-slate-400 dark:text-slate-500 flex-shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Tipo de Documento</p>
-                  <p className="font-semibold text-slate-900 dark:text-white mt-0.5">{document.documentType.name}</p>
-                </div>
-              </div>
+                  {/* Seccion Auditoria */}
+                  <Collapsible 
+                    open={infoSectionsOpen.audit} 
+                    onOpenChange={(open) => setInfoSectionsOpen(prev => ({ ...prev, audit: open }))}
+                  >
+                    <CollapsibleTrigger className="flex items-center justify-between w-full py-3 hover:bg-gray-50 dark:hover:bg-slate-800 -mx-4 px-4 rounded">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-gray-600 dark:text-slate-400" aria-hidden="true" />
+                        <span className="font-medium text-gray-900 dark:text-white">Auditoria</span>
+                      </div>
+                      <ChevronRight className={`h-4 w-4 text-gray-400 transition-transform ${infoSectionsOpen.audit ? 'rotate-90' : ''}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-2 pb-3">
+                      <InfoRow label="Creado por" value={document.creator.fullName} icon={User} />
+                      <InfoRow label="Creado el" value={format(new Date(document.createdAt), "dd/MM/yyyy HH:mm", { locale: es })} icon={Calendar} />
+                      <InfoRow label="Actualizado" value={format(new Date(document.updatedAt), "dd/MM/yyyy HH:mm", { locale: es })} icon={Clock} />
+                    </CollapsibleContent>
+                  </Collapsible>
 
-              <div className="flex items-start gap-3">
-                <Building2 className="w-5 h-5 text-slate-400 dark:text-slate-500 flex-shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Oficina</p>
-                  <p className="font-semibold text-slate-900 dark:text-white mt-0.5">{document.office.name}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <User className="w-5 h-5 text-slate-400 dark:text-slate-500 flex-shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Remitente</p>
-                  <p className="font-semibold text-slate-900 dark:text-white mt-0.5 break-words">{document.sender}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <FileDigit className="w-5 h-5 text-slate-400 dark:text-slate-500 flex-shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Número de Folios</p>
-                  <p className="font-semibold text-slate-900 dark:text-white mt-0.5">{document.folioCount}</p>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm">
-            <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">Archivador</h2>
-
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Código</p>
-                <p className="font-semibold text-slate-900 dark:text-white mt-0.5">{document.archivador.code}</p>
-              </div>
-
-              <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Nombre</p>
-                <p className="font-semibold text-slate-900 dark:text-white mt-0.5">{document.archivador.name}</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm">
-            <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">Archivo</h2>
-
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Nombre del Archivo</p>
-                <p className="font-semibold text-slate-900 dark:text-white break-all mt-0.5">{document.fileName}</p>
-              </div>
-
-              <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Tamaño</p>
-                <p className="font-semibold text-slate-900 dark:text-white mt-0.5">{formatFileSize(document.fileSize)}</p>
-              </div>
-
-              <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Versión</p>
-                <p className="font-semibold text-slate-900 dark:text-white mt-0.5">v{document.currentVersion}</p>
-              </div>
-            </div>
-          </Card>
-
-              {document.annotations && (
-                <Card className="p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm">
-                  <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">Anotaciones</h2>
-                  <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">{document.annotations}</p>
-                </Card>
-              )}
-
-              <Card className="p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm">
-                <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">Creado por</h2>
-                <p className="font-semibold text-slate-900 dark:text-white">{document.creator.fullName}</p>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                  {format(new Date(document.createdAt), "dd/MM/yyyy 'a las' HH:mm", { locale: es })}
-                </p>
+                  {/* Anotaciones */}
+                  {document.annotations && (
+                    <div className="pt-3">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">Anotaciones</p>
+                      <p className="text-sm text-gray-600 dark:text-slate-400 whitespace-pre-wrap bg-gray-50 dark:bg-slate-800 p-3 rounded-lg">
+                        {document.annotations}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="versions" className="mt-6">
+            {/* Tab: Versions */}
+            <TabsContent value="versions" className="mt-4">
               <VersionHistory
                 documentId={documentId}
                 onRestoreVersion={loadDocument}
@@ -358,61 +519,54 @@ export default function DocumentDetailPage() {
               />
             </TabsContent>
 
-            <TabsContent value="signatures" className="mt-6">
-              <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm">
+            {/* Tab: Signatures */}
+            <TabsContent value="signatures" className="mt-4">
+              <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
                 <CardHeader className="pb-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <CardTitle className="text-slate-900 dark:text-white font-semibold">Firmas del Documento</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
+                      Firmas del Documento
+                    </CardTitle>
                     {canRevertSignatures && signatures.length > 0 && isAdmin && (
                       <Button
                         variant="destructive"
                         size="sm"
                         onClick={() => setShowRevertModal(true)}
-                        className="w-full sm:w-auto"
                       >
-                        <RotateCcw className="mr-2 h-4 w-4" />
-                        Revertir Firmas
+                        <RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" />
+                        Revertir
                       </Button>
                     )}
                   </div>
                 </CardHeader>
                 <CardContent>
                   {signatures.length === 0 ? (
-                    <div className="text-center py-12">
-                      <FileSignature className="h-16 w-16 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-                      <p className="text-slate-600 dark:text-slate-400 font-medium">Este documento no tiene firmas activas</p>
-                      <p className="text-slate-500 dark:text-slate-500 text-sm mt-1">Las firmas aparecerán aquí una vez aplicadas</p>
+                    <div className="text-center py-8">
+                      <FileSignature className="h-12 w-12 text-gray-300 dark:text-slate-600 mx-auto mb-3" aria-hidden="true" />
+                      <p className="text-gray-600 dark:text-slate-400 font-medium">Sin firmas activas</p>
+                      <p className="text-gray-500 dark:text-slate-500 text-sm mt-1">Las firmas apareceran aqui</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
                       {signatures.map((sig) => (
-                        <div key={sig.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 space-y-3 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-500 flex-shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-slate-900 dark:text-white truncate">{sig.signer.fullName}</p>
-                                <p className="text-sm text-slate-600 dark:text-slate-400">Firmante</p>
+                        <div 
+                          key={sig.id} 
+                          className="border border-gray-200 dark:border-slate-700 rounded-lg p-3 bg-gray-50 dark:bg-slate-800"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-500" aria-hidden="true" />
+                              <div>
+                                <p className="font-medium text-gray-900 dark:text-white">{sig.signer.fullName}</p>
+                                <p className="text-xs text-gray-500 dark:text-slate-400">
+                                  {format(new Date(sig.timestamp), 'dd/MM/yyyy HH:mm', { locale: es })}
+                                </p>
                               </div>
                             </div>
-                            <Badge className="bg-green-100 dark:bg-green-950 text-green-800 dark:text-green-400 border-green-200 dark:border-green-800 flex-shrink-0">
-                              {sig.status === 'VÁLIDO' || sig.status === 'VALID' ? 'Completada' : sig.status}
+                            <Badge className="bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400">
+                              Completada
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                            <Clock className="h-4 w-4 text-slate-400 dark:text-slate-500" />
-                            <span>{format(new Date(sig.timestamp), 'dd/MM/yyyy HH:mm', { locale: es })}</span>
-                          </div>
-                          {sig.observations && sig.observations.length > 0 && (
-                            <div className="text-sm pt-3 border-t border-slate-200 dark:border-slate-700">
-                              <p className="font-semibold text-slate-900 dark:text-white mb-2">Observaciones:</p>
-                              <ul className="list-disc list-inside space-y-1 text-slate-700 dark:text-slate-300">
-                                {sig.observations.map((obs, idx) => (
-                                  <li key={idx}>{obs}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -424,32 +578,87 @@ export default function DocumentDetailPage() {
         </div>
       </div>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      {/* Delete Dialog - Improved */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={(open) => {
+        setShowDeleteDialog(open);
+        if (!open) setDeleteConfirmText('');
+      }}>
         <AlertDialogContent className="dark:bg-slate-900 dark:border-slate-700">
           <AlertDialogHeader>
-            <AlertDialogTitle className="dark:text-white">¿Eliminar documento?</AlertDialogTitle>
-            <AlertDialogDescription className="dark:text-slate-400">
-              Esta acción no se puede deshacer. El documento{' '}
-              <strong className="dark:text-slate-200">{document.documentNumber}</strong> será eliminado permanentemente.
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-full">
+                <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
+              </div>
+              <AlertDialogTitle className="dark:text-white">
+                Eliminar documento
+              </AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="dark:text-slate-400 space-y-3">
+              <p>
+                Esta accion eliminara permanentemente el documento{' '}
+                <strong className="text-gray-900 dark:text-white">{document.documentNumber}</strong>
+              </p>
+              
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm">
+                <p className="font-medium text-red-800 dark:text-red-300 mb-1">Se eliminara:</p>
+                <ul className="list-disc list-inside text-red-700 dark:text-red-400 space-y-1">
+                  <li>El archivo PDF ({document.fileName})</li>
+                  <li>Todas las versiones del documento</li>
+                  <li>{signatures.length} firma(s) registradas</li>
+                  <li>Historial de cambios</li>
+                </ul>
+              </div>
+              
+              <div className="pt-2">
+                <label 
+                  htmlFor="delete-confirm"
+                  className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2"
+                >
+                  Escribe <strong>ELIMINAR</strong> para confirmar:
+                </label>
+                <Input
+                  id="delete-confirm"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
+                  placeholder="ELIMINAR"
+                  className="uppercase"
+                />
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
-              Eliminar
+            <AlertDialogCancel className="dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleteConfirmText !== 'ELIMINAR'}
+              className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
+            >
+              Eliminar permanentemente
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Modal de reversión de firmas */}
+      {/* Revert Signature Modal */}
       {document && (
         <RevertSignatureModal
           open={showRevertModal}
           onClose={() => setShowRevertModal(false)}
           documentId={documentId}
           documentNumber={document.documentNumber}
-          signatures={signatures}
+          signatures={signatures.map(sig => ({
+            id: sig.id,
+            timestamp: sig.timestamp,
+            status: sig.status,
+            signer: {
+              id: sig.signer.id,
+              firstName: sig.signer.fullName.split(' ')[0] || '',
+              lastName: sig.signer.fullName.split(' ').slice(1).join(' ') || '',
+              username: sig.signer.id,
+            }
+          }))}
           onSuccess={() => {
             loadDocument();
             loadSignatures();
@@ -459,7 +668,7 @@ export default function DocumentDetailPage() {
         />
       )}
 
-      {/* Modal de comparación de versiones */}
+      {/* Compare Versions Modal */}
       {compareVersions && (
         <CompareVersionsModal
           open={showCompareModal}
@@ -472,17 +681,28 @@ export default function DocumentDetailPage() {
           onRestoreVersion={async (versionId) => {
             try {
               await api.post(`/documents/${documentId}/versions/${versionId}/restore`);
-              toast.success('Versión restaurada correctamente');
+              toast.success('Version restaurada correctamente');
               loadDocument();
               setShowCompareModal(false);
             } catch (error: unknown) {
               const apiError = error as { response?: { data?: { message?: string } } };
-              toast.error(apiError.response?.data?.message || 'Error al restaurar versión');
+              toast.error(apiError.response?.data?.message || 'Error al restaurar version');
             }
           }}
           isAdmin={isAdmin}
         />
       )}
+
+      {/* Keyboard shortcuts hint */}
+      <div className="hidden lg:block fixed bottom-4 right-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg p-3 text-xs text-gray-500 dark:text-slate-400">
+        <p className="font-medium mb-1">Atajos de teclado:</p>
+        <div className="space-y-0.5">
+          <p><kbd className="px-1 py-0.5 bg-gray-100 dark:bg-slate-700 rounded">Ctrl+D</kbd> Descargar</p>
+          <p><kbd className="px-1 py-0.5 bg-gray-100 dark:bg-slate-700 rounded">Ctrl+E</kbd> Editar</p>
+          <p><kbd className="px-1 py-0.5 bg-gray-100 dark:bg-slate-700 rounded">1</kbd> <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-slate-700 rounded">2</kbd> <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-slate-700 rounded">3</kbd> Tabs</p>
+          <p><kbd className="px-1 py-0.5 bg-gray-100 dark:bg-slate-700 rounded">Esc</kbd> Volver</p>
+        </div>
+      </div>
     </div>
   );
 }
