@@ -1,38 +1,60 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  ArrowLeft,
   Upload,
   Download,
   CheckCircle,
   XCircle,
-  FileSpreadsheet,
-  AlertCircle,
+  Trash2,
+  Copy,
+  Loader2,
+  FileText,
+  Eye,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import FileUploader from '@/components/documents/FileUploader';
-import { FileListPanel, FileItem } from '@/components/archivo/documentos/FileListPanel';
+import PDFPreview from '@/components/documents/PDFPreview';
+import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { useDocuments } from '@/hooks/useDocuments';
 import { useArchivadores } from '@/hooks/useArchivadores';
 import { useDocumentTypes } from '@/hooks/useDocumentTypes';
 import { useOffices } from '@/hooks/useOffices';
 import { DocumentMetadata } from '@/types/document.types';
-import {
-  generateCSVTemplate,
-  downloadCSV,
-  parseCSV,
-  validateCSVRow,
-  csvRowToMetadata,
-} from '@/lib/utils/csvUtils';
+import { generateCSVTemplate, downloadCSV, parseCSV, csvRowToMetadata } from '@/lib/utils/csvUtils';
 import { toast } from 'sonner';
+import { pdfjs } from 'react-pdf';
 
-interface FileMetadata extends Partial<DocumentMetadata> {
+interface FileWithMetadata {
   id: string;
-  fileName: string;
+  file: File;
+  pageCount: number | null;
+  metadata: {
+    documentTypeId: string;
+    officeId: string;
+    documentNumber: string;
+    documentDate: string;
+    sender: string;
+    folioCount: number;
+  };
 }
 
 export default function BatchUploadPage() {
@@ -43,17 +65,16 @@ export default function BatchUploadPage() {
   const { offices, fetchOffices } = useOffices();
   const csvInputRef = useRef<HTMLInputElement>(null);
 
-  const [fileItems, setFileItems] = useState<FileItem[]>([]);
-  const [commonMetadata, setCommonMetadata] = useState({
-    archivadorId: '',
-  });
-  const [filesMetadata, setFilesMetadata] = useState<FileMetadata[]>([]);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadResults, setUploadResults] = useState<{
+  const [files, setFiles] = useState<FileWithMetadata[]>([]);
+  const [archivadorId, setArchivadorId] = useState('');
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
+  const [uploadResult, setUploadResult] = useState<{
     successful: number;
     failed: number;
-    results: Array<{ fileName: string; success: boolean; error?: string }>;
+    errors: Array<{ fileName: string; error: string }>;
   } | null>(null);
+
+  const todayString = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
     fetchArchivadores({ limit: 100 });
@@ -61,308 +82,232 @@ export default function BatchUploadPage() {
     fetchOffices({ limit: 100 });
   }, [fetchArchivadores, fetchDocumentTypes, fetchOffices]);
 
-  // Update metadata when files change
-  useEffect(() => {
-    const newMetadata = fileItems.map((item) => {
-      const existing = filesMetadata.find((m) => m.id === item.id);
-      return (
-        existing || {
-          id: item.id,
-          fileName: item.file.name,
-          documentTypeId: '',
-          officeId: '',
-          documentNumber: '',
-          documentDate: new Date().toISOString().split('T')[0],
-          sender: '',
-          folioCount: 1,
-          annotations: '',
-        }
-      );
-    });
-    setFilesMetadata(newMetadata);
-  }, [fileItems]);
+  const archivadorOptions: ComboboxOption[] = archivadores.map((a) => ({
+    value: a.id,
+    label: `${a.code} - ${a.name}`,
+  }));
 
-  const handleFileChange = (files: File[]) => {
-    const newItems: FileItem[] = files.map((file) => ({
-      id: `${file.name}-${Date.now()}`,
-      file,
-      status: 'pending',
-    }));
-    setFileItems(newItems);
+  const documentTypeOptions: ComboboxOption[] = documentTypes.map((t) => ({
+    value: t.id,
+    label: t.name,
+  }));
 
-    // Mark as ready after basic validation
-    setTimeout(() => {
-      setFileItems((prev) =>
-        prev.map((item) => ({
-          ...item,
-          status: item.file.size > 50 * 1024 * 1024 ? 'error' : 'ready',
-          error:
-            item.file.size > 50 * 1024 * 1024
-              ? 'Archivo excede 50 MB'
-              : undefined,
-        }))
-      );
-    }, 500);
+  const officeOptions: ComboboxOption[] = offices.map((o) => ({
+    value: o.id,
+    label: o.name,
+  }));
+
+  const detectPdfPages = async (file: File): Promise<number | null> => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+      return pdf.numPages;
+    } catch {
+      return null;
+    }
   };
 
-  const handleRemoveFile = (id: string) => {
-    setFileItems((prev) => prev.filter((item) => item.id !== id));
-    setFilesMetadata((prev) => prev.filter((meta) => meta.id !== id));
+  const handleFilesChange = useCallback(async (newFiles: File[]) => {
+    const existingNames = new Set(files.map(f => f.file.name));
+    const uniqueFiles = newFiles.filter(f => !existingNames.has(f.name));
+
+    if (files.length + uniqueFiles.length > 50) {
+      toast.error('Maximo 50 archivos permitidos');
+      return;
+    }
+
+    const processedFiles = await Promise.all(
+      uniqueFiles.map(async (file) => {
+        const pageCount = await detectPdfPages(file);
+        return {
+          id: `${file.name}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          file,
+          pageCount,
+          metadata: {
+            documentTypeId: '',
+            officeId: '',
+            documentNumber: '',
+            documentDate: todayString,
+            sender: '',
+            folioCount: pageCount || 1,
+          },
+        };
+      })
+    );
+
+    setFiles(prev => [...prev, ...processedFiles]);
+    
+    if (processedFiles.some(f => f.pageCount)) {
+      toast.success('Paginas detectadas automaticamente');
+    }
+  }, [files, todayString]);
+
+  const removeFile = (id: string) => {
+    setFiles(prev => prev.filter(f => f.id !== id));
+  };
+
+  const updateMetadata = (id: string, field: string, value: string | number) => {
+    setFiles(prev => prev.map(f => 
+      f.id === id ? { ...f, metadata: { ...f.metadata, [field]: value } } : f
+    ));
+  };
+
+  const copyFromPrevious = (index: number) => {
+    if (index === 0) return;
+    const prev = files[index - 1];
+    setFiles(current => current.map((f, i) => 
+      i === index ? {
+        ...f,
+        metadata: {
+          ...f.metadata,
+          documentTypeId: prev.metadata.documentTypeId,
+          officeId: prev.metadata.officeId,
+          sender: prev.metadata.sender,
+        }
+      } : f
+    ));
+    toast.success('Datos copiados');
   };
 
   const handleDownloadTemplate = () => {
-    const fileNames = fileItems.map((item) => item.file.name);
-    if (fileNames.length === 0) {
-      toast.error('Primero selecciona archivos');
+    if (files.length === 0) {
+      toast.error('Selecciona archivos primero');
       return;
     }
-
-    const csvContent = generateCSVTemplate(fileNames);
-    const timestamp = new Date().toISOString().split('T')[0];
-    downloadCSV(csvContent, `plantilla-metadatos-${timestamp}.csv`);
-    toast.success('Plantilla CSV descargada');
+    const csvContent = generateCSVTemplate(files.map(f => f.file.name));
+    downloadCSV(csvContent, `plantilla-${todayString}.csv`);
   };
 
-  const handleImportCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = (evt) => {
       try {
-        const csvText = e.target?.result as string;
-        const rows = parseCSV(csvText);
-
-        // Validate all rows
-        const validationErrors: string[] = [];
-        rows.forEach((row, index) => {
-          const { valid, errors } = validateCSVRow(row);
-          if (!valid) {
-            validationErrors.push(`Fila ${index + 2}: ${errors.join(', ')}`);
+        const rows = parseCSV(evt.target?.result as string);
+        setFiles(prev => prev.map(f => {
+          const row = rows.find(r => r.fileName === f.file.name);
+          if (row) {
+            const meta = csvRowToMetadata(row);
+            return { ...f, metadata: { ...f.metadata, ...meta } };
           }
-        });
-
-        if (validationErrors.length > 0) {
-          toast.error(
-            `Errores en el CSV:\n${validationErrors.slice(0, 3).join('\n')}`
-          );
-          return;
-        }
-
-        // Apply metadata from CSV
-        const updatedMetadata = filesMetadata.map((meta) => {
-          const csvRow = rows.find((r) => r.fileName === meta.fileName);
-          if (csvRow) {
-            return {
-              ...meta,
-              ...csvRowToMetadata(csvRow),
-            };
-          }
-          return meta;
-        });
-
-        setFilesMetadata(updatedMetadata);
-        toast.success(`${rows.length} metadatos importados correctamente`);
-      } catch (error) {
-        console.error('Error al importar CSV:', error);
-        toast.error('Error al procesar el archivo CSV');
+          return f;
+        }));
+        toast.success(`${rows.length} registros importados`);
+      } catch {
+        toast.error('Error al importar CSV');
       }
     };
     reader.readAsText(file);
-
-    // Reset input
-    if (csvInputRef.current) {
-      csvInputRef.current.value = '';
-    }
+    if (csvInputRef.current) csvInputRef.current.value = '';
   };
 
-  const handleMetadataChange = (index: number, field: string, value: string | number) => {
-    const newMetadata = [...filesMetadata];
-    newMetadata[index] = { ...newMetadata[index], [field]: value };
-    setFilesMetadata(newMetadata);
+  const validateFiles = (): boolean => {
+    if (!archivadorId) {
+      toast.error('Selecciona un archivador');
+      return false;
+    }
+
+    const invalid = files.filter(f => 
+      !f.metadata.documentTypeId || 
+      !f.metadata.officeId || 
+      !f.metadata.documentNumber || 
+      !f.metadata.sender
+    );
+
+    if (invalid.length > 0) {
+      toast.error(`${invalid.length} archivo(s) con datos incompletos`);
+      return false;
+    }
+
+    return true;
   };
 
   const handleUpload = async () => {
-    if (!commonMetadata.archivadorId) {
-      toast.error('Selecciona un archivador');
-      return;
-    }
-
-    const allValid = filesMetadata.every(
-      (m) =>
-        m.documentTypeId &&
-        m.officeId &&
-        m.documentNumber &&
-        m.documentDate &&
-        m.sender &&
-        m.folioCount
-    );
-
-    if (!allValid) {
-      toast.error('Por favor completa todos los campos requeridos');
-      return;
-    }
-
-    // Mark files as uploading
-    setFileItems((prev) =>
-      prev.map((item) => ({ ...item, status: 'uploading' }))
-    );
+    if (!validateFiles()) return;
 
     try {
-      const files = fileItems.map((item) => item.file);
       const result = await uploadBatch(
-        files,
-        commonMetadata,
-        filesMetadata.map(({ id, fileName, ...rest }) => rest)
+        files.map(f => f.file),
+        { archivadorId },
+        files.map(f => f.metadata as Partial<DocumentMetadata>)
       );
 
-      // El backend retorna: { status, message, data: { total, successful, failed, successfulIds, errors } }
-      const apiResponse = result as unknown as {
-        status: string;
-        message: string;
-        data: {
-          total: number;
-          successful: number;
-          failed: number;
-          successfulIds: string[];
-          errors: Array<{ fileName: string; error: string }>;
-        };
-      };
-
-      const batchResult = apiResponse.data;
-
-      // Update file statuses
-      setFileItems((prev) =>
-        prev.map((item) => {
-          const hasError = (batchResult.errors || []).some(
-            (e) => e.fileName === item.file.name
-          );
-          return {
-            ...item,
-            status: hasError ? 'error' : 'success',
-            error: hasError
-              ? batchResult.errors?.find((e) => e.fileName === item.file.name)?.error
-              : undefined,
-          };
-        })
-      );
-
-      // Create results summary
-      const results = [
-        ...files
-          .filter((file) => {
-            return !(batchResult.errors || []).some((e) => e.fileName === file.name);
-          })
-          .map((file) => ({
-            fileName: file.name,
-            success: true as const,
-          })),
-        ...(batchResult.errors || []).map((error) => ({
-          fileName: error.fileName,
-          success: false as const,
-          error: error.error,
-        })),
-      ];
-
-      setUploadResults({
-        successful: batchResult.successful || 0,
-        failed: batchResult.failed || 0,
-        results,
+      const data = (result as { data: { successful: number; failed: number; errors: Array<{ fileName: string; error: string }> } }).data;
+      setUploadResult({
+        successful: data.successful,
+        failed: data.failed,
+        errors: data.errors || [],
       });
-
-      setUploadProgress(100);
-      toast.success(
-        `${batchResult.successful} documentos subidos correctamente${
-          batchResult.failed > 0 ? `, ${batchResult.failed} errores` : ''
-        }`
-      );
-    } catch (error: unknown) {
-      console.error('Error en carga masiva:', error);
-      const errorMessage =
-        (error as { message?: string })?.message || 'Error desconocido en la carga masiva';
-      toast.error('Error: ' + errorMessage);
-
-      // Mark all as error
-      setFileItems((prev) =>
-        prev.map((item) => ({
-          ...item,
-          status: 'error',
-          error: errorMessage,
-        }))
-      );
+    } catch (error) {
+      console.error('Error:', error);
     }
   };
 
-  const handleReset = () => {
-    setFileItems([]);
-    setFilesMetadata([]);
-    setUploadResults(null);
-    setUploadProgress(0);
-  };
-
-  const handleFinish = () => {
-    router.push('/dashboard/archivo/documentos');
-  };
-
-  if (uploadResults) {
+  // Pantalla de resultado
+  if (uploadResult) {
     return (
-      <div className="max-w-4xl mx-auto">
-        <Card className="p-6 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
-          <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Resultado de Carga Masiva</h2>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => router.push('/dashboard/archivo/documentos')}
+            className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Resultado de Carga</h1>
+        </div>
 
+        <Card className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
           <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-4">
-              <div className="flex items-center">
-                <CheckCircle className="w-8 h-8 text-green-500 dark:text-green-400 mr-3" />
+            <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
                 <div>
-                  <p className="text-sm text-green-600 dark:text-green-400">Exitosos</p>
-                  <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-                    {uploadResults.successful}
-                  </p>
+                  <p className="text-sm text-emerald-700 dark:text-emerald-300">Exitosos</p>
+                  <p className="text-2xl font-bold text-emerald-800 dark:text-emerald-200">{uploadResult.successful}</p>
                 </div>
               </div>
             </div>
-
-            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
-              <div className="flex items-center">
-                <XCircle className="w-8 h-8 text-red-500 dark:text-red-400 mr-3" />
+            <div className="p-4 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800">
+              <div className="flex items-center gap-3">
+                <XCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
                 <div>
-                  <p className="text-sm text-red-600 dark:text-red-400">Fallidos</p>
-                  <p className="text-2xl font-bold text-red-700 dark:text-red-300">{uploadResults.failed}</p>
+                  <p className="text-sm text-red-700 dark:text-red-300">Fallidos</p>
+                  <p className="text-2xl font-bold text-red-800 dark:text-red-200">{uploadResult.failed}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="space-y-2 mb-6">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Detalle por Archivo</h3>
-            {uploadResults.results.map((result, index) => (
-              <div
-                key={index}
-                className={`flex items-center justify-between p-3 rounded-lg ${
-                  result.success ? 'bg-green-50 dark:bg-green-950/30' : 'bg-red-50 dark:bg-red-950/30'
-                }`}
-              >
-                <div className="flex items-center">
-                  {result.success ? (
-                    <CheckCircle className="w-5 h-5 text-green-500 dark:text-green-400 mr-2" />
-                  ) : (
-                    <XCircle className="w-5 h-5 text-red-500 dark:text-red-400 mr-2" />
-                  )}
-                  <span className="text-sm font-medium dark:text-white">{result.fileName}</span>
+          {uploadResult.errors.length > 0 && (
+            <div className="space-y-2 mb-6">
+              <h3 className="font-medium text-slate-900 dark:text-slate-100">Errores</h3>
+              {uploadResult.errors.map((err, i) => (
+                <div key={i} className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-sm text-red-800 dark:text-red-200">
+                  <span className="font-medium">{err.fileName}:</span> {err.error}
                 </div>
-                {!result.success && result.error && (
-                  <span className="text-xs text-red-600 dark:text-red-400">{result.error}</span>
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={handleReset}>
-              Nueva Carga
+          <div className="flex gap-3 justify-end pt-4 border-t border-slate-200 dark:border-slate-800">
+            <Button 
+              variant="outline" 
+              onClick={() => { setUploadResult(null); setFiles([]); }}
+              className="border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+            >
+              Nueva carga
             </Button>
-            <Button onClick={handleFinish}>Ir a Documentos</Button>
+            <Button 
+              onClick={() => router.push('/dashboard/archivo/documentos')}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Ir a documentos
+            </Button>
           </div>
         </Card>
       </div>
@@ -370,161 +315,271 @@ export default function BatchUploadPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Carga Masiva de Documentos</h1>
-        <p className="text-gray-600 dark:text-slate-400 mt-2">Sube múltiples documentos al mismo tiempo</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => router.push('/dashboard/archivo/documentos')}
+          className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Carga Masiva</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Sube multiples documentos a la vez</p>
+        </div>
       </div>
 
-      <Card className="p-6 mb-6 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
-        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">1. Seleccionar Archivos</h2>
+      {/* Archivador */}
+      <Card className="p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+        <Label className="text-sm font-medium text-slate-900 dark:text-slate-100">Archivador destino *</Label>
+        <div className="mt-2 max-w-md">
+          <Combobox
+            options={archivadorOptions}
+            value={archivadorId}
+            onValueChange={setArchivadorId}
+            placeholder="Seleccionar archivador..."
+            searchPlaceholder="Buscar..."
+          />
+        </div>
+      </Card>
+
+      {/* File Upload */}
+      <Card className="p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-medium text-slate-900 dark:text-slate-100">Archivos</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{files.length} archivo(s) seleccionado(s)</p>
+          </div>
+          {files.length > 0 && (
+            <div className="flex gap-2">
+              <input type="file" ref={csvInputRef} accept=".csv" className="hidden" onChange={handleImportCSV} />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleDownloadTemplate}
+                className="border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+              >
+                <Download className="h-4 w-4 mr-1" />
+                Plantilla
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => csvInputRef.current?.click()}
+                className="border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+              >
+                <Upload className="h-4 w-4 mr-1" />
+                Importar
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setFiles([])} 
+                className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Limpiar
+              </Button>
+            </div>
+          )}
+        </div>
+
         <FileUploader
-          files={fileItems.map((item) => item.file)}
-          onFilesChange={handleFileChange}
+          files={files.map(f => f.file)}
+          onFilesChange={handleFilesChange}
           maxFiles={50}
         />
       </Card>
 
-      {fileItems.length > 0 && (
-        <>
-          <Card className="p-6 mb-6 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">2. Metadatos Comunes</h2>
-            <div className="space-y-2">
-              <Label htmlFor="archivadorId" className="text-gray-900 dark:text-white font-semibold">
-                Archivador <span className="text-red-500">*</span>
-              </Label>
-              <select
-                id="archivadorId"
-                value={commonMetadata.archivadorId}
-                onChange={(e) =>
-                  setCommonMetadata({ ...commonMetadata, archivadorId: e.target.value })
-                }
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-              >
-                <option value="">Selecciona un archivador</option>
-                {archivadores.map((archivador) => (
-                  <option key={archivador.id} value={archivador.id}>
-                    {archivador.code} - {archivador.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </Card>
-
-          <Card className="p-6 mb-6 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">3. Metadatos Específicos</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-gray-50 dark:bg-slate-800">
-                    <th className="border border-gray-300 dark:border-slate-600 p-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Archivo</th>
-                    <th className="border border-gray-300 dark:border-slate-600 p-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Tipo *</th>
-                    <th className="border border-gray-300 dark:border-slate-600 p-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Oficina *</th>
-                    <th className="border border-gray-300 dark:border-slate-600 p-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Número *</th>
-                    <th className="border border-gray-300 dark:border-slate-600 p-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Fecha *</th>
-                    <th className="border border-gray-300 dark:border-slate-600 p-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Remitente *</th>
-                    <th className="border border-gray-300 dark:border-slate-600 p-2 text-left text-sm font-semibold text-gray-900 dark:text-white">Folios *</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filesMetadata.map((meta, index) => (
-                    <tr key={index} className="hover:bg-gray-50 dark:hover:bg-slate-800">
-                      <td className="border border-gray-300 dark:border-slate-600 p-2 text-sm font-medium text-gray-900 dark:text-white">{meta.fileName}</td>
-                      <td className="border border-gray-300 dark:border-slate-600 p-2">
-                        <select
-                          value={meta.documentTypeId}
-                          onChange={(e) =>
-                            handleMetadataChange(index, 'documentTypeId', e.target.value)
-                          }
-                          className="w-full p-1 text-sm border rounded bg-background text-foreground dark:border-slate-600"
+      {/* Metadata Table */}
+      {files.length > 0 && (
+        <Card className="p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 overflow-x-auto">
+          <h2 className="font-medium text-slate-900 dark:text-slate-100 mb-4">Metadatos</h2>
+          
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 dark:border-slate-700">
+                <th className="text-left py-3 px-2 font-medium text-slate-600 dark:text-slate-400 w-56">Archivo</th>
+                <th className="text-left py-3 px-2 font-medium text-slate-600 dark:text-slate-400">Tipo *</th>
+                <th className="text-left py-3 px-2 font-medium text-slate-600 dark:text-slate-400">Oficina *</th>
+                <th className="text-left py-3 px-2 font-medium text-slate-600 dark:text-slate-400">Numero *</th>
+                <th className="text-left py-3 px-2 font-medium text-slate-600 dark:text-slate-400 w-32">Fecha</th>
+                <th className="text-left py-3 px-2 font-medium text-slate-600 dark:text-slate-400">Remitente *</th>
+                <th className="text-left py-3 px-2 font-medium text-slate-600 dark:text-slate-400 w-20">Folios</th>
+                <th className="w-24"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {files.map((item, index) => (
+                <tr 
+                  key={item.id} 
+                  className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                >
+                  <td className="py-3 px-2">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-red-500 dark:text-red-400 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <span 
+                          className="block truncate max-w-[160px] text-slate-900 dark:text-slate-100" 
+                          title={item.file.name}
                         >
-                          <option value="">Seleccionar</option>
-                          {documentTypes.map((type) => (
-                            <option key={type.id} value={type.id}>
-                              {type.name}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="border border-gray-300 dark:border-slate-600 p-2">
-                        <select
-                          value={meta.officeId}
-                          onChange={(e) =>
-                            handleMetadataChange(index, 'officeId', e.target.value)
-                          }
-                          className="w-full p-1 text-sm border rounded bg-background text-foreground dark:border-slate-600"
-                        >
-                          <option value="">Seleccionar</option>
-                          {offices.map((office) => (
-                            <option key={office.id} value={office.id}>
-                              {office.name}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="border border-gray-300 dark:border-slate-600 p-2">
-                        <Input
-                          value={meta.documentNumber}
-                          onChange={(e) =>
-                            handleMetadataChange(index, 'documentNumber', e.target.value)
-                          }
-                          className="text-sm"
-                        />
-                      </td>
-                      <td className="border border-gray-300 dark:border-slate-600 p-2">
-                        <Input
-                          type="date"
-                          value={meta.documentDate}
-                          onChange={(e) =>
-                            handleMetadataChange(index, 'documentDate', e.target.value)
-                          }
-                          className="text-sm"
-                        />
-                      </td>
-                      <td className="border border-gray-300 dark:border-slate-600 p-2">
-                        <Input
-                          value={meta.sender}
-                          onChange={(e) =>
-                            handleMetadataChange(index, 'sender', e.target.value)
-                          }
-                          className="text-sm"
-                        />
-                      </td>
-                      <td className="border border-gray-300 dark:border-slate-600 p-2">
-                        <Input
-                          type="number"
-                          value={meta.folioCount}
-                          onChange={(e) =>
-                            handleMetadataChange(index, 'folioCount', parseInt(e.target.value))
-                          }
-                          min="1"
-                          className="text-sm w-20"
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => router.back()}>
-              Cancelar
-            </Button>
-            <Button onClick={handleUpload} disabled={loading}>
-              {loading ? (
-                <>Procesando...</>
-              ) : (
-                <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Procesar Carga ({fileItems.length} archivos)
-                </>
-              )}
-            </Button>
-          </div>
-        </>
+                          {item.file.name}
+                        </span>
+                        {item.pageCount && (
+                          <span className="text-xs text-emerald-600 dark:text-emerald-400">{item.pageCount} paginas</span>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-3 px-2">
+                    <Combobox
+                      options={documentTypeOptions}
+                      value={item.metadata.documentTypeId}
+                      onValueChange={(v) => updateMetadata(item.id, 'documentTypeId', v)}
+                      placeholder="Tipo..."
+                      className="h-9"
+                    />
+                  </td>
+                  <td className="py-3 px-2">
+                    <Combobox
+                      options={officeOptions}
+                      value={item.metadata.officeId}
+                      onValueChange={(v) => updateMetadata(item.id, 'officeId', v)}
+                      placeholder="Oficina..."
+                      className="h-9"
+                    />
+                  </td>
+                  <td className="py-3 px-2">
+                    <Input
+                      value={item.metadata.documentNumber}
+                      onChange={(e) => updateMetadata(item.id, 'documentNumber', e.target.value)}
+                      placeholder="OFICIO-001-2025"
+                      className="h-9 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                    />
+                  </td>
+                  <td className="py-3 px-2">
+                    <Input
+                      type="date"
+                      value={item.metadata.documentDate}
+                      onChange={(e) => updateMetadata(item.id, 'documentDate', e.target.value)}
+                      max={todayString}
+                      className="h-9 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                    />
+                  </td>
+                  <td className="py-3 px-2">
+                    <Input
+                      value={item.metadata.sender}
+                      onChange={(e) => updateMetadata(item.id, 'sender', e.target.value)}
+                      placeholder="Remitente"
+                      className="h-9 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                    />
+                  </td>
+                  <td className="py-3 px-2">
+                    <Input
+                      type="number"
+                      value={item.metadata.folioCount}
+                      onChange={(e) => updateMetadata(item.id, 'folioCount', parseInt(e.target.value) || 1)}
+                      min={1}
+                      className="h-9 w-16 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                    />
+                  </td>
+                  <td className="py-3 px-2">
+                    <div className="flex gap-1">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/50" 
+                              onClick={() => setPreviewFile(item.file)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Ver PDF</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      {index > 0 && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100" 
+                                onClick={() => copyFromPrevious(index)}
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copiar anterior</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/50" 
+                              onClick={() => removeFile(item.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Eliminar</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
       )}
+
+      {/* Actions */}
+      {files.length > 0 && (
+        <div className="flex justify-end">
+          <Button 
+            onClick={handleUpload} 
+            disabled={loading || !archivadorId}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Procesando...
+              </>
+            ) : (
+              <>
+                <Upload className="h-4 w-4 mr-2" />
+                Subir {files.length} archivo(s)
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+
+      {/* PDF Preview Dialog */}
+      <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
+        <DialogContent className="max-w-5xl max-h-[90vh] bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+          <DialogHeader className="flex flex-row items-center justify-between">
+            <DialogTitle className="text-slate-900 dark:text-slate-100 truncate pr-8">
+              {previewFile?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="overflow-auto max-h-[calc(90vh-100px)]">
+            {previewFile && <PDFPreview file={previewFile} />}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

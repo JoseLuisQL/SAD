@@ -57,19 +57,19 @@ export function HelpPanel({ title = 'Ayuda', faqs, className }: HelpPanelProps) 
         </Button>
       </div>
 
-      <div className="p-4 max-h-[520px] overflow-y-auto space-y-3">
+      <div className="p-4 max-h-[520px] overflow-y-auto space-y-3 bg-white dark:bg-slate-900">
         {faqs.map((faq, index) => (
-          <div key={index} className="border-b border-gray-200 pb-3 last:border-0">
+          <div key={index} className="border-b border-gray-200 dark:border-slate-700 pb-3 last:border-0">
             <button
               onClick={() => setExpandedIndex(expandedIndex === index ? null : index)}
               className="w-full text-left flex items-start justify-between group"
             >
-              <span className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors pr-2">
+              <span className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors pr-2">
                 {faq.question}
               </span>
               <span
                 className={cn(
-                  'text-gray-400 transition-transform flex-shrink-0',
+                  'text-gray-400 dark:text-slate-500 transition-transform flex-shrink-0',
                   expandedIndex === index && 'rotate-180'
                 )}
               >
@@ -77,7 +77,7 @@ export function HelpPanel({ title = 'Ayuda', faqs, className }: HelpPanelProps) 
               </span>
             </button>
             {expandedIndex === index && (
-              <div className="mt-2 text-sm text-gray-600 animate-in slide-in-from-top-1 duration-200">
+              <div className="mt-2 text-sm text-gray-600 dark:text-slate-400 animate-in slide-in-from-top-1 duration-200">
                 {faq.answer}
               </div>
             )}

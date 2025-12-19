@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useEffect, useMemo } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { useArchivadores } from '@/hooks/useArchivadores';
 import { useDocumentTypes } from '@/hooks/useDocumentTypes';
@@ -18,8 +19,17 @@ const documentMetadataSchema = z.object({
   archivadorId: z.string().min(1, 'Selecciona un archivador'),
   documentTypeId: z.string().min(1, 'Selecciona un tipo de documento'),
   officeId: z.string().min(1, 'Selecciona una oficina'),
-  documentNumber: z.string().min(1, 'Ingresa el numero de documento'),
-  documentDate: z.string().min(1, 'Ingresa la fecha del documento'),
+  documentNumber: z.string()
+    .min(1, 'Ingresa el numero de documento')
+    .regex(/^[A-Za-z0-9\-\/]+$/, 'Solo letras, numeros, guiones y barras'),
+  documentDate: z.string()
+    .min(1, 'Ingresa la fecha del documento')
+    .refine((date) => {
+      const selected = new Date(date);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      return selected <= today;
+    }, 'La fecha no puede ser futura'),
   sender: z.string().min(1, 'Ingresa el remitente'),
   folioCount: z.number().int().positive('Debe ser mayor a 0'),
   annotations: z.string().optional(),
@@ -44,6 +54,7 @@ interface DocumentMetadataFormProps {
   defaultValues?: Partial<DocumentMetadata>;
   submitLabel?: string;
   loading?: boolean;
+  suggestedFolioCount?: number;
 }
 
 export default function DocumentMetadataForm({
@@ -52,6 +63,7 @@ export default function DocumentMetadataForm({
   defaultValues,
   submitLabel = 'Guardar',
   loading = false,
+  suggestedFolioCount,
 }: DocumentMetadataFormProps) {
   const { archivadores, fetchArchivadores } = useArchivadores();
   const { documentTypes, fetchDocumentTypes } = useDocumentTypes();
@@ -60,16 +72,18 @@ export default function DocumentMetadataForm({
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isValid, dirtyFields },
     watch,
+    setValue,
   } = useForm<MetadataFormData>({
     resolver: zodResolver(documentMetadataSchema),
     mode: 'onChange',
     defaultValues: defaultValues ? {
       ...defaultValues,
-      folioCount: defaultValues.folioCount || 1,
+      folioCount: defaultValues.folioCount || suggestedFolioCount || 1,
     } : {
-      folioCount: 1,
+      folioCount: suggestedFolioCount || 1,
     },
   });
 
@@ -87,15 +101,38 @@ export default function DocumentMetadataForm({
     fetchOffices({ limit: 100 });
   }, [fetchArchivadores, fetchDocumentTypes, fetchOffices]);
 
+  useEffect(() => {
+    if (suggestedFolioCount && !defaultValues?.folioCount) {
+      setValue('folioCount', suggestedFolioCount);
+    }
+  }, [suggestedFolioCount, setValue, defaultValues?.folioCount]);
+
+  const archivadorOptions: ComboboxOption[] = useMemo(() => 
+    archivadores.map((a) => ({
+      value: a.id,
+      label: `${a.code} - ${a.name}`,
+      description: a.description || undefined,
+    })), [archivadores]);
+
+  const documentTypeOptions: ComboboxOption[] = useMemo(() => 
+    documentTypes.map((t) => ({
+      value: t.id,
+      label: t.name,
+      description: t.description || undefined,
+    })), [documentTypes]);
+
+  const officeOptions: ComboboxOption[] = useMemo(() => 
+    offices.map((o) => ({
+      value: o.id,
+      label: o.name,
+      description: o.code || undefined,
+    })), [offices]);
+
   const handleFormSubmit = (data: MetadataFormData) => {
     onSubmit(data as DocumentMetadata);
   };
 
-  const selectClassName = cn(
-    'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground',
-    'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-    'disabled:cursor-not-allowed disabled:opacity-50'
-  );
+  const todayString = new Date().toISOString().split('T')[0];
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
@@ -140,20 +177,22 @@ export default function DocumentMetadataForm({
           htmlFor="archivadorId"
           error={errors.archivadorId?.message}
         >
-          <select
-            id="archivadorId"
-            {...register('archivadorId')}
-            className={selectClassName}
-            aria-invalid={!!errors.archivadorId}
-            aria-describedby={errors.archivadorId ? 'archivadorId-error' : undefined}
-          >
-            <option value="">Selecciona un archivador...</option>
-            {archivadores.map((archivador) => (
-              <option key={archivador.id} value={archivador.id}>
-                {archivador.code} - {archivador.name}
-              </option>
-            ))}
-          </select>
+          <Controller
+            name="archivadorId"
+            control={control}
+            render={({ field }) => (
+              <Combobox
+                id="archivadorId"
+                options={archivadorOptions}
+                value={field.value}
+                onValueChange={field.onChange}
+                placeholder="Buscar archivador..."
+                searchPlaceholder="Escribe para buscar..."
+                emptyMessage="No se encontro el archivador"
+                aria-invalid={!!errors.archivadorId}
+              />
+            )}
+          />
         </FieldWithHelp>
 
         <FieldWithHelp
@@ -163,19 +202,22 @@ export default function DocumentMetadataForm({
           htmlFor="documentTypeId"
           error={errors.documentTypeId?.message}
         >
-          <select
-            id="documentTypeId"
-            {...register('documentTypeId')}
-            className={selectClassName}
-            aria-invalid={!!errors.documentTypeId}
-          >
-            <option value="">Selecciona un tipo...</option>
-            {documentTypes.map((type) => (
-              <option key={type.id} value={type.id}>
-                {type.name}
-              </option>
-            ))}
-          </select>
+          <Controller
+            name="documentTypeId"
+            control={control}
+            render={({ field }) => (
+              <Combobox
+                id="documentTypeId"
+                options={documentTypeOptions}
+                value={field.value}
+                onValueChange={field.onChange}
+                placeholder="Buscar tipo de documento..."
+                searchPlaceholder="Escribe para buscar..."
+                emptyMessage="No se encontro el tipo"
+                aria-invalid={!!errors.documentTypeId}
+              />
+            )}
+          />
         </FieldWithHelp>
 
         <FieldWithHelp
@@ -185,19 +227,22 @@ export default function DocumentMetadataForm({
           htmlFor="officeId"
           error={errors.officeId?.message}
         >
-          <select
-            id="officeId"
-            {...register('officeId')}
-            className={selectClassName}
-            aria-invalid={!!errors.officeId}
-          >
-            <option value="">Selecciona una oficina...</option>
-            {offices.map((office) => (
-              <option key={office.id} value={office.id}>
-                {office.name}
-              </option>
-            ))}
-          </select>
+          <Controller
+            name="officeId"
+            control={control}
+            render={({ field }) => (
+              <Combobox
+                id="officeId"
+                options={officeOptions}
+                value={field.value}
+                onValueChange={field.onChange}
+                placeholder="Buscar oficina..."
+                searchPlaceholder="Escribe para buscar..."
+                emptyMessage="No se encontro la oficina"
+                aria-invalid={!!errors.officeId}
+              />
+            )}
+          />
         </FieldWithHelp>
 
         <FieldWithHelp
@@ -210,8 +255,9 @@ export default function DocumentMetadataForm({
           <Input
             id="documentNumber"
             {...register('documentNumber')}
-            placeholder="Ej: OF-001-2025"
+            placeholder="Ej: OFICIO-001-2025-DGTH o MEMO-123/2025"
             aria-invalid={!!errors.documentNumber}
+            autoComplete="off"
           />
         </FieldWithHelp>
 
@@ -226,8 +272,12 @@ export default function DocumentMetadataForm({
             id="documentDate" 
             type="date" 
             {...register('documentDate')}
+            max={todayString}
             aria-invalid={!!errors.documentDate}
           />
+          <p className="text-xs text-muted-foreground mt-1">
+            La fecha no puede ser posterior a hoy
+          </p>
         </FieldWithHelp>
 
         <FieldWithHelp
@@ -240,8 +290,9 @@ export default function DocumentMetadataForm({
           <Input
             id="sender"
             {...register('sender')}
-            placeholder="Ej: Direccion Regional de Salud"
+            placeholder="Ej: Direccion General de Administracion - MINSA"
             aria-invalid={!!errors.sender}
+            autoComplete="off"
           />
         </FieldWithHelp>
 
@@ -257,9 +308,14 @@ export default function DocumentMetadataForm({
             type="number"
             {...register('folioCount', { valueAsNumber: true })}
             min="1"
-            placeholder="1"
+            placeholder="Cantidad de paginas del documento"
             aria-invalid={!!errors.folioCount}
           />
+          {suggestedFolioCount && (
+            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+              Detectado automaticamente: {suggestedFolioCount} paginas
+            </p>
+          )}
         </FieldWithHelp>
       </div>
 
