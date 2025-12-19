@@ -1,18 +1,21 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { SignatureFlowsTable } from '@/components/firma/SignatureFlowsTable';
 import { SignatureFlowsFilters, SignatureFlowsFiltersData } from '@/components/firma/SignatureFlowsFilters';
 import { CreateSignatureFlowForm } from '@/components/firma/CreateSignatureFlowForm';
 import { SignatureFlowDetail } from '@/components/firma/SignatureFlowDetail';
+import { StatsBar } from '@/components/firma/StatsBar';
+import { CancelFlowDialog } from '@/components/firma/CancelFlowDialog';
 import { SignatureFlow } from '@/types/signature.types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { firmaApi } from '@/lib/api/firma';
-import { FileSignature, Clock, CheckCircle, XCircle, Plus, HelpCircle } from 'lucide-react';
+import { Clock, Plus, HelpCircle } from 'lucide-react';
 import { useOnboarding } from '@/hooks/useOnboarding';
 
 export default function FlujosDeFirmaPage() {
@@ -23,13 +26,15 @@ export default function FlujosDeFirmaPage() {
     totalFlows?: number;
   }>({});
   const [loading, setLoading] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedFlow, setSelectedFlow] = useState<SignatureFlow | null>(null);
+  const [flowToCancel, setFlowToCancel] = useState<SignatureFlow | null>(null);
   const [currentFilters, setCurrentFilters] = useState<SignatureFlowsFiltersData>({});
   const router = useRouter();
   const { startTour, resetTour } = useOnboarding();
 
-  const fetchFlows = async (filters: SignatureFlowsFiltersData = {}) => {
+  const fetchFlows = useCallback(async (filters: SignatureFlowsFiltersData = {}) => {
     try {
       setLoading(true);
       const response = await firmaApi.getAllSignatureFlows(filters);
@@ -41,40 +46,64 @@ export default function FlujosDeFirmaPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchPendingFlows = async () => {
+  const fetchPendingFlows = useCallback(async () => {
     try {
       const response = await firmaApi.getPendingSignatureFlows();
       setPendingFlows(response.data.data);
     } catch (error) {
       console.error('Error al cargar flujos pendientes:', error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchFlows();
     fetchPendingFlows();
-  }, []);
+  }, [fetchFlows, fetchPendingFlows]);
 
-  // Detectar parámetro refresh en la URL para recargar automáticamente después de firmar
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     if (searchParams.get('refresh') === 'true') {
-      console.log('🔄 Detectado parámetro refresh, recargando flujos...');
-      
-      // Recargar flujos y flujos pendientes
       fetchFlows(currentFilters);
       fetchPendingFlows();
       
-      // Limpiar el parámetro de la URL sin recargar la página
       const url = new URL(window.location.href);
       url.searchParams.delete('refresh');
       window.history.replaceState({}, '', url.pathname + url.search);
       
       toast.success('Flujos actualizados correctamente');
     }
-  }, []);
+  }, [currentFilters, fetchFlows, fetchPendingFlows]);
+
+  // Atajos de teclado
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + N = Nuevo flujo
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        setIsCreateModalOpen(true);
+      }
+      // Ctrl/Cmd + F = Enfocar busqueda
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        document.getElementById('search-flows')?.focus();
+      }
+      // Escape = Cerrar modales
+      if (e.key === 'Escape') {
+        if (flowToCancel) {
+          setFlowToCancel(null);
+        } else if (selectedFlow) {
+          setSelectedFlow(null);
+        } else if (isCreateModalOpen) {
+          setIsCreateModalOpen(false);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [flowToCancel, selectedFlow, isCreateModalOpen]);
 
   const handleFilterChange = (filters: SignatureFlowsFiltersData) => {
     setCurrentFilters(filters);
@@ -91,20 +120,31 @@ export default function FlujosDeFirmaPage() {
     }
   };
 
-  const handleCancelFlow = async (flowId: string) => {
-    if (confirm('¿Está seguro de que desea cancelar este flujo de firma?')) {
-      try {
-        await firmaApi.cancelSignatureFlow(flowId);
-        toast.success('Flujo cancelado exitosamente');
-        setSelectedFlow(null);
-        fetchFlows(currentFilters);
-        fetchPendingFlows();
-      } catch (error: unknown) {
-        console.error('Error al cancelar flujo:', error);
-        const apiError = error as { message?: string; response?: { data?: { message?: string } } };
-        const errorMessage = apiError?.message || apiError?.response?.data?.message || 'Error al cancelar el flujo';
-        toast.error(errorMessage);
-      }
+  const handleRequestCancel = (flowId: string) => {
+    const flow = flows.find(f => f.id === flowId);
+    if (flow) {
+      setFlowToCancel(flow);
+    }
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!flowToCancel) return;
+    
+    try {
+      setCancelLoading(true);
+      await firmaApi.cancelSignatureFlow(flowToCancel.id);
+      toast.success('Flujo cancelado exitosamente');
+      setFlowToCancel(null);
+      setSelectedFlow(null);
+      fetchFlows(currentFilters);
+      fetchPendingFlows();
+    } catch (error: unknown) {
+      console.error('Error al cancelar flujo:', error);
+      const apiError = error as { message?: string; response?: { data?: { message?: string } } };
+      const errorMessage = apiError?.message || apiError?.response?.data?.message || 'Error al cancelar el flujo';
+      toast.error(errorMessage);
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -127,154 +167,188 @@ export default function FlujosDeFirmaPage() {
   };
 
   const totalByStatus = metadata.totalByStatus || {};
+  const inProgressCount = (totalByStatus.PENDING || 0) + (totalByStatus.IN_PROGRESS || 0);
 
   return (
-    <div className="px-6 lg:px-10 py-8 min-h-[calc(100vh-6rem)] space-y-6">
-      <div className="flex items-center justify-between" data-tour="firma-flujos-header">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Gestión de Flujos de Firma</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-2">Administra y crea flujos de firma digital</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleStartTour}
-            className="gap-2"
-          >
-            <HelpCircle className="h-4 w-4" />
-            Iniciar Tour
-          </Button>
-          <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-slate-900 hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-700" data-tour="firma-flujos-create">
-                <Plus className="h-4 w-4 mr-2" />
-                Crear Nuevo Flujo
-              </Button>
-            </DialogTrigger>
-          <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-semibold text-slate-900 dark:text-slate-100">Crear Nuevo Flujo de Firma</DialogTitle>
-            </DialogHeader>
-            <CreateSignatureFlowForm onFlowCreated={handleFlowCreated} />
-          </DialogContent>
-        </Dialog>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-tour="firma-flujos-stats">
-        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardDescription className="text-slate-600 dark:text-slate-400">Total de Flujos</CardDescription>
-            <CardTitle className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <FileSignature className="h-6 w-6 text-slate-500 dark:text-slate-400" />
-              {metadata.totalFlows || 0}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-
-        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardDescription className="text-slate-600 dark:text-slate-400">En Progreso</CardDescription>
-            <CardTitle className="text-3xl font-bold text-blue-600 dark:text-blue-400 flex items-center gap-2">
-              <Clock className="h-6 w-6" />
-              {(totalByStatus.PENDING || 0) + (totalByStatus.IN_PROGRESS || 0)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-
-        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardDescription className="text-slate-600 dark:text-slate-400">Completados</CardDescription>
-            <CardTitle className="text-3xl font-bold text-green-600 dark:text-green-400 flex items-center gap-2">
-              <CheckCircle className="h-6 w-6" />
-              {totalByStatus.COMPLETED || 0}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-
-        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardDescription className="text-slate-600 dark:text-slate-400">Cancelados</CardDescription>
-            <CardTitle className="text-3xl font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
-              <XCircle className="h-6 w-6" />
-              {totalByStatus.CANCELLED || 0}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
-
-      {pendingFlows.length > 0 && (
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-200 dark:border-blue-800 shadow-sm" data-tour="firma-flujos-pending">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              Mis Flujos Pendientes
-            </CardTitle>
-            <CardDescription className="text-slate-700 dark:text-slate-300">
-              Tienes {pendingFlows.length} documento{pendingFlows.length !== 1 ? 's' : ''} esperando tu firma
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {pendingFlows.map(flow => (
-                <Card key={flow.id} className="p-4 bg-white dark:bg-slate-900 border-blue-200 dark:border-blue-800 hover:shadow-md transition-shadow">
-                  <div className="space-y-2">
-                    <p className="font-semibold text-slate-900 dark:text-slate-100">{flow.name}</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      Documento: <span className="font-medium">{flow.document.documentNumber}</span>
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-500 truncate">{flow.document.fileName}</p>
+    <TooltipProvider>
+      <div className="px-4 lg:px-8 py-6 min-h-[calc(100vh-6rem)] space-y-5">
+        {/* Header simplificado */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" data-tour="firma-flujos-header">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">
+              Flujos de Firma
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Gestiona los procesos de firma digital de documentos
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleStartTour}
+                  className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                >
+                  <HelpCircle className="h-4 w-4 mr-1.5" />
+                  Ayuda
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Iniciar tour guiado</TooltipContent>
+            </Tooltip>
+            
+            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DialogTrigger asChild>
                     <Button 
-                      onClick={() => handleSignDocumentInFlow(flow.documentId, flow.id)}
-                      className="w-full mt-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700"
+                      className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all duration-200
+                                 hover:shadow-md active:scale-[0.98]" 
+                      data-tour="firma-flujos-create"
                     >
-                      Firmar Ahora
+                      <Plus className="h-4 w-4 mr-1.5" />
+                      Nuevo Flujo
                     </Button>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                  </DialogTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <span>Crear nuevo flujo</span>
+                  <kbd className="ml-2 px-1.5 py-0.5 bg-slate-700 rounded text-xs font-mono">
+                    Ctrl+N
+                  </kbd>
+                </TooltipContent>
+              </Tooltip>
+              <DialogContent className="sm:max-w-[700px] md:max-w-[750px] max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+                    Crear Nuevo Flujo de Firma
+                  </DialogTitle>
+                </DialogHeader>
+                <CreateSignatureFlowForm onFlowCreated={handleFlowCreated} />
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
 
-      <div data-tour="firma-flujos-filters">
-        <SignatureFlowsFilters onFilterChange={handleFilterChange} loading={loading} />
-      </div>
-
-      <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm" data-tour="firma-flujos-table">
-        <CardHeader>
-          <CardTitle className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Todos los Flujos de Firma</CardTitle>
-          <CardDescription className="text-slate-600 dark:text-slate-400">
-            {flows.length} flujo{flows.length !== 1 ? 's' : ''} encontrado{flows.length !== 1 ? 's' : ''}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <SignatureFlowsTable
-            flows={flows}
-            onViewDetails={handleViewDetails}
-            onCancelFlow={handleCancelFlow}
-            loading={loading}
+        {/* Barra de estadisticas compacta */}
+        <div data-tour="firma-flujos-stats">
+          <StatsBar
+            totalFlows={metadata.totalFlows || 0}
+            inProgress={inProgressCount}
+            completed={totalByStatus.COMPLETED || 0}
+            cancelled={totalByStatus.CANCELLED || 0}
           />
-        </CardContent>
-      </Card>
+        </div>
 
-      {selectedFlow && (
-        <Dialog open={!!selectedFlow} onOpenChange={() => setSelectedFlow(null)}>
-          <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-semibold text-slate-900 dark:text-slate-100">Detalles del Flujo de Firma</DialogTitle>
-            </DialogHeader>
-            <SignatureFlowDetail
-              flow={selectedFlow}
-              onSignDocument={handleSignDocumentInFlow}
-              onCancelFlow={handleCancelFlow}
+        {/* Flujos pendientes del usuario */}
+        {pendingFlows.length > 0 && (
+          <Card 
+            className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 
+                       border-blue-200 dark:border-blue-800/50 shadow-sm" 
+            data-tour="firma-flujos-pending"
+          >
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                Mis Flujos Pendientes
+              </CardTitle>
+              <CardDescription className="text-slate-600 dark:text-slate-400">
+                Tienes {pendingFlows.length} documento{pendingFlows.length !== 1 ? 's' : ''} esperando tu firma
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {pendingFlows.map(flow => (
+                  <Card 
+                    key={flow.id} 
+                    className="p-4 bg-white dark:bg-slate-900 border-blue-200 dark:border-blue-800/50 
+                               hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 
+                               transition-all duration-200 cursor-pointer"
+                    onClick={() => handleSignDocumentInFlow(flow.documentId, flow.id)}
+                  >
+                    <div className="space-y-2">
+                      <p className="font-medium text-slate-900 dark:text-slate-100 line-clamp-1">
+                        {flow.name}
+                      </p>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">
+                        Documento: <span className="font-medium">{flow.document.documentNumber}</span>
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-500 truncate">
+                        {flow.document.fileName}
+                      </p>
+                      <Button 
+                        className="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white"
+                        size="sm"
+                      >
+                        Firmar Ahora
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Filtros */}
+        <div data-tour="firma-flujos-filters">
+          <SignatureFlowsFilters onFilterChange={handleFilterChange} loading={loading} />
+        </div>
+
+        {/* Tabla de flujos */}
+        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm" data-tour="firma-flujos-table">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                  Todos los Flujos
+                </CardTitle>
+                <CardDescription className="text-slate-500 dark:text-slate-400">
+                  {flows.length} flujo{flows.length !== 1 ? 's' : ''} encontrado{flows.length !== 1 ? 's' : ''}
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <SignatureFlowsTable
+              flows={flows}
+              onViewDetails={handleViewDetails}
+              onCancelFlow={handleRequestCancel}
+              onCreateNew={() => setIsCreateModalOpen(true)}
               loading={loading}
             />
-          </DialogContent>
-        </Dialog>
-      )}
-    </div>
+          </CardContent>
+        </Card>
+
+        {/* Modal de detalles del flujo */}
+        {selectedFlow && (
+          <Dialog open={!!selectedFlow} onOpenChange={() => setSelectedFlow(null)}>
+            <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+                  Detalles del Flujo de Firma
+                </DialogTitle>
+              </DialogHeader>
+              <SignatureFlowDetail
+                flow={selectedFlow}
+                onSignDocument={handleSignDocumentInFlow}
+                onCancelFlow={handleRequestCancel}
+                loading={loading}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Modal de confirmacion de cancelacion */}
+        <CancelFlowDialog
+          flow={flowToCancel}
+          open={!!flowToCancel}
+          onOpenChange={(open) => !open && setFlowToCancel(null)}
+          onConfirm={handleConfirmCancel}
+          loading={cancelLoading}
+        />
+      </div>
+    </TooltipProvider>
   );
 }
