@@ -94,15 +94,24 @@ export default function AdvancedSearchFilters({
 
   const hasFilters = Object.values(watch()).some(value => value && value !== '');
 
+  const activeFiltersCount = Object.values(watch()).filter(value => value && value !== '').length;
+
   return (
     <ScrollArea className="max-h-[500px]" data-tour="search-filters">
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-gray-200 dark:border-slate-700">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-2">
-            <div className="p-1.5 rounded-md bg-blue-50 dark:bg-blue-900/20">
+      {/* M5: Panel de filtros con mejor contraste y organización */}
+      <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+        {/* Header con contador de filtros activos */}
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30">
               <Filter className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </div>
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white">Filtros Avanzados</h3>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white">Filtros Avanzados</h3>
+            {activeFiltersCount > 0 && (
+              <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                {activeFiltersCount} activo{activeFiltersCount > 1 ? 's' : ''}
+              </span>
+            )}
           </div>
           {hasFilters && (
             <Button
@@ -110,59 +119,66 @@ export default function AdvancedSearchFilters({
               variant="ghost"
               size="sm"
               onClick={handleClear}
-              className="h-8 text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800"
+              className="h-8 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
-              <X className="h-3 w-3 mr-1" />
-              Limpiar
+              <X className="h-3.5 w-3.5 mr-1" />
+              Limpiar todo
             </Button>
           )}
         </div>
 
-        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
-          {/* Identificación Section */}
+        <form onSubmit={handleSubmit(handleFormSubmit)} className="p-4 space-y-5">
+          {/* Sección: Identificación */}
           <div className="space-y-3">
-            <h4 className="text-xs font-semibold text-gray-700 dark:text-slate-300 uppercase tracking-wide border-b border-gray-200 dark:border-slate-700 pb-1.5">
-              Identificación
+            <h4 className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+              Identificación del documento
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="documentNumber" className="text-sm text-gray-700 dark:text-slate-300">
+                <Label htmlFor="documentNumber" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   Número de Documento
                 </Label>
                 <Input
                   id="documentNumber"
                   type="text"
                   placeholder="Ej: 001-2025"
-                  className="h-9 border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-slate-400"
+                  className="h-9 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 
+                             text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500
+                             focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   {...register('documentNumber')}
                   aria-label="Número de documento"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="sender" className="text-sm text-gray-700 dark:text-slate-300">
+                <Label htmlFor="sender" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   Remitente
                 </Label>
                 <Input
                   id="sender"
                   type="text"
                   placeholder="Ej: Ministerio de Salud"
-                  className="h-9 border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-slate-400"
+                  className="h-9 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 
+                             text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500
+                             focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   {...register('sender')}
                   aria-label="Remitente del documento"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="documentTypeId" className="text-sm text-gray-700 dark:text-slate-300">
+                <Label htmlFor="documentTypeId" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   Tipo de Documento
                 </Label>
                 <Select
                   value={watch('documentTypeId') || undefined}
                   onValueChange={(value) => setValue('documentTypeId', value || '')}
                 >
-                  <SelectTrigger className="border-gray-300 dark:border-slate-700" aria-label="Tipo de documento">
-                    <SelectValue placeholder="Todos" />
+                  <SelectTrigger 
+                    className="h-9 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800" 
+                    aria-label="Tipo de documento"
+                  >
+                    <SelectValue placeholder="Todos los tipos" />
                   </SelectTrigger>
                   <SelectContent>
                     {documentTypes.map((type) => (
@@ -176,22 +192,25 @@ export default function AdvancedSearchFilters({
             </div>
           </div>
 
-          {/* Ubicación Section */}
+          {/* Sección: Ubicación */}
           <div className="space-y-3">
-            <h4 className="text-xs font-semibold text-gray-700 dark:text-slate-300 uppercase tracking-wide border-b border-gray-200 dark:border-slate-700 pb-1.5">
-              Ubicación
+            <h4 className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+              Ubicación física
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="officeId" className="text-sm text-gray-700 dark:text-slate-300">
+                <Label htmlFor="officeId" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   Oficina
                 </Label>
                 <Select
                   value={watch('officeId') || undefined}
                   onValueChange={(value) => setValue('officeId', value || '')}
                 >
-                  <SelectTrigger className="h-9 border-gray-300 dark:border-slate-700" aria-label="Oficina">
-                    <SelectValue placeholder="Todas" />
+                  <SelectTrigger 
+                    className="h-9 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800" 
+                    aria-label="Oficina"
+                  >
+                    <SelectValue placeholder="Todas las oficinas" />
                   </SelectTrigger>
                   <SelectContent>
                     {offices.map((office) => (
@@ -204,14 +223,17 @@ export default function AdvancedSearchFilters({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="archivadorId" className="text-sm text-gray-700 dark:text-slate-300">
+                <Label htmlFor="archivadorId" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   Archivador
                 </Label>
                 <Select
                   value={watch('archivadorId') || undefined}
                   onValueChange={(value) => setValue('archivadorId', value || '')}
                 >
-                  <SelectTrigger className="h-9 border-gray-300 dark:border-slate-700" aria-label="Archivador">
+                  <SelectTrigger 
+                    className="h-9 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800" 
+                    aria-label="Archivador"
+                  >
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
@@ -225,14 +247,17 @@ export default function AdvancedSearchFilters({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="periodId" className="text-sm text-gray-700 dark:text-slate-300">
+                <Label htmlFor="periodId" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   Periodo
                 </Label>
                 <Select
                   value={watch('periodId') || undefined}
                   onValueChange={(value) => setValue('periodId', value || '')}
                 >
-                  <SelectTrigger className="h-9 border-gray-300 dark:border-slate-700" aria-label="Periodo">
+                  <SelectTrigger 
+                    className="h-9 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800" 
+                    aria-label="Periodo"
+                  >
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
@@ -246,14 +271,17 @@ export default function AdvancedSearchFilters({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="expedienteId" className="text-sm text-gray-700 dark:text-slate-300">
+                <Label htmlFor="expedienteId" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   Expediente
                 </Label>
                 <Select
                   value={watch('expedienteId') || undefined}
                   onValueChange={(value) => setValue('expedienteId', value || '')}
                 >
-                  <SelectTrigger className="h-9 border-gray-300 dark:border-slate-700" aria-label="Expediente">
+                  <SelectTrigger 
+                    className="h-9 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800" 
+                    aria-label="Expediente"
+                  >
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
@@ -268,33 +296,37 @@ export default function AdvancedSearchFilters({
             </div>
           </div>
 
-          {/* Fechas Section */}
+          {/* Sección: Fechas */}
           <div className="space-y-3">
-            <h4 className="text-xs font-semibold text-gray-700 dark:text-slate-300 uppercase tracking-wide border-b border-gray-200 dark:border-slate-700 pb-1.5">
-              Fechas
+            <h4 className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+              Rango de fechas
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="dateFrom" className="text-sm text-gray-700 dark:text-slate-300">
+                <Label htmlFor="dateFrom" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   Desde
                 </Label>
                 <Input
                   id="dateFrom"
                   type="date"
-                  className="h-9 border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-white"
+                  className="h-9 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 
+                             text-slate-900 dark:text-white
+                             focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   {...register('dateFrom')}
                   aria-label="Fecha desde"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="dateTo" className="text-sm text-gray-700 dark:text-slate-300">
+                <Label htmlFor="dateTo" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   Hasta
                 </Label>
                 <Input
                   id="dateTo"
                   type="date"
-                  className="h-9 border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-white"
+                  className="h-9 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 
+                             text-slate-900 dark:text-white
+                             focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   {...register('dateTo')}
                   aria-label="Fecha hasta"
                 />
@@ -302,20 +334,28 @@ export default function AdvancedSearchFilters({
             </div>
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4 border-t border-gray-200 dark:border-slate-700">
+          {/* Botones de acción */}
+          <div className="flex justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={handleClear}
               disabled={loading || !hasFilters}
-              className="border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              className="border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 
+                         hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
             >
               Limpiar
             </Button>
-            <Button type="submit" size="sm" disabled={loading}>
+            <Button 
+              type="submit" 
+              size="sm" 
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white
+                         focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2"
+            >
               <Filter className="h-3.5 w-3.5 mr-1.5" />
-              {loading ? 'Aplicando...' : 'Aplicar'}
+              {loading ? 'Aplicando...' : 'Aplicar filtros'}
             </Button>
           </div>
         </form>

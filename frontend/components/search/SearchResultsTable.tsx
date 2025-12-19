@@ -7,19 +7,13 @@ import {
   Eye,
   Download,
   FolderOpen,
-  MoreVertical,
-  FileText,
   Search,
   ChevronLeft,
   ChevronRight,
+  Building2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Table,
   TableBody,
@@ -87,17 +81,7 @@ export default function SearchResultsTable({
   }
 
   if (results.length === 0) {
-    return (
-      <div className="text-center py-16 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">
-        <Search className="w-16 h-16 mx-auto mb-4 text-slate-400 dark:text-slate-500" />
-        <h3 className="text-xl font-medium text-slate-900 dark:text-white mb-2">
-          No se encontraron resultados
-        </h3>
-        <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-          Intenta ajustar tus criterios de búsqueda o filtros para obtener mejores resultados.
-        </p>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -110,19 +94,24 @@ export default function SearchResultsTable({
         </div>
       )}
 
-      <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+      {/* M7: Tabla con columnas reducidas y mejor contraste */}
+      <div 
+        className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm"
+        role="grid"
+        aria-label="Resultados de búsqueda"
+      >
         <Table>
-          <TableHeader className="sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur z-10">
+          <TableHeader className="sticky top-0 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur z-10">
             <TableRow className="border-slate-200 dark:border-slate-700">
-              <TableHead>
+              <TableHead className="w-[180px] text-slate-700 dark:text-slate-200 font-semibold">
                 <SortableHeader
-                  label="Número"
+                  label="Documento"
                   field="documentNumber"
                   currentSort={sortConfig}
                   onSort={handleSort}
                 />
               </TableHead>
-              <TableHead>
+              <TableHead className="w-[100px] text-slate-700 dark:text-slate-200 font-semibold">
                 <SortableHeader
                   label="Fecha"
                   field="documentDate"
@@ -130,8 +119,7 @@ export default function SearchResultsTable({
                   onSort={handleSort}
                 />
               </TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>
+              <TableHead className="text-slate-700 dark:text-slate-200 font-semibold">
                 <SortableHeader
                   label="Remitente"
                   field="sender"
@@ -139,97 +127,143 @@ export default function SearchResultsTable({
                   onSort={handleSort}
                 />
               </TableHead>
-              <TableHead>Oficina</TableHead>
-              <TableHead>Archivador</TableHead>
-              <TableHead>Folios</TableHead>
-              <TableHead>Estado OCR</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
+              <TableHead className="w-[100px] text-slate-700 dark:text-slate-200 font-semibold">Estado</TableHead>
+              <TableHead className="w-[130px] text-right text-slate-700 dark:text-slate-200 font-semibold">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {results.map((document, idx) => (
               <TableRow 
                 key={document.id} 
-                className="hover:bg-slate-50 dark:hover:bg-slate-800 odd:bg-slate-50/50 dark:odd:bg-slate-800/50 border-slate-200 dark:border-slate-700"
+                className={`group cursor-pointer transition-colors border-slate-100 dark:border-slate-800
+                  ${idx % 2 === 0 
+                    ? 'bg-white dark:bg-slate-900' 
+                    : 'bg-slate-50/50 dark:bg-slate-800/30'
+                  }
+                  hover:bg-blue-50/50 dark:hover:bg-blue-900/20`}
                 data-tour={idx === 0 ? "search-result-row" : undefined}
+                onClick={() => onView?.(document)}
+                tabIndex={0}
+                role="row"
+                aria-label={`Documento ${document.documentNumber}, ${document.sender}`}
+                onKeyDown={(e) => e.key === 'Enter' && onView?.(document)}
               >
-                <TableCell className="font-medium text-slate-900 dark:text-white">
-                  <HighlightedText 
-                    text={document.documentNumber}
-                    terms={document.searchMetadata?.matchedTerms}
-                  />
-                </TableCell>
-                <TableCell className="text-slate-700 dark:text-slate-300">
-                  {format(new Date(document.documentDate), 'dd MMM yyyy', { locale: es })}
-                </TableCell>
-                <TableCell className="text-slate-700 dark:text-slate-300">{document.documentType.name}</TableCell>
-                <TableCell className="max-w-xs text-slate-700 dark:text-slate-300">
-                  <HighlightedText 
-                    text={document.sender}
-                    terms={document.searchMetadata?.matchedTerms}
-                  />
-                </TableCell>
-                <TableCell className="text-slate-700 dark:text-slate-300">{document.office.name}</TableCell>
-                <TableCell>
-                  <div className="text-sm">
-                    <div className="font-medium text-slate-900 dark:text-white">{document.archivador.code}</div>
-                    <div className="text-slate-500 dark:text-slate-400 text-xs">
-                      {document.archivador.name}
-                    </div>
+                {/* Columna combinada: Número + Tipo */}
+                <TableCell className="py-3">
+                  <div className="space-y-1">
+                    <p className="font-medium text-slate-900 dark:text-white">
+                      <HighlightedText 
+                        text={document.documentNumber}
+                        terms={document.searchMetadata?.matchedTerms}
+                      />
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {document.documentType.name}
+                    </p>
                   </div>
                 </TableCell>
-                <TableCell className="text-slate-700 dark:text-slate-300">{document.folioCount}</TableCell>
-                <TableCell>
+                
+                {/* Fecha */}
+                <TableCell className="text-slate-600 dark:text-slate-300 py-3">
+                  {format(new Date(document.documentDate), 'dd/MM/yyyy')}
+                </TableCell>
+                
+                {/* Remitente + Oficina en línea secundaria */}
+                <TableCell className="py-3">
+                  <div className="space-y-1">
+                    <p className="text-slate-900 dark:text-white truncate max-w-[280px]">
+                      <HighlightedText 
+                        text={document.sender}
+                        terms={document.searchMetadata?.matchedTerms}
+                      />
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                      <Building2 className="h-3 w-3" />
+                      {document.office.name}
+                    </p>
+                  </div>
+                </TableCell>
+                
+                {/* Estado OCR con badges minimalistas */}
+                <TableCell className="py-3">
                   <div className="flex flex-col gap-1">
-                    <OCRStatusBadge 
-                      status={document.ocrStatus} 
-                    />
+                    <OCRStatusBadge status={document.ocrStatus} />
                     {document.searchMetadata && (
-                      <div className="flex gap-1">
+                      <div className="flex flex-wrap gap-1">
                         {document.searchMetadata.hasOcrMatch && (
-                          <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800">
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800">
                             OCR
                           </Badge>
                         )}
                         {document.searchMetadata.hasAnnotationMatch && (
-                          <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800">
-                            Anotaciones
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800">
+                            Nota
                           </Badge>
                         )}
                       </div>
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {onView && (
-                        <DropdownMenuItem onClick={() => onView(document)}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          Vista rápida
-                        </DropdownMenuItem>
-                      )}
-                      {onDownload && (
-                        <DropdownMenuItem onClick={() => onDownload(document)}>
-                          <Download className="mr-2 h-4 w-4" />
-                          Descargar
-                        </DropdownMenuItem>
-                      )}
-                      {document.expediente && onViewExpediente && (
-                        <DropdownMenuItem 
-                          onClick={() => onViewExpediente(document.expediente!.id)}
-                        >
-                          <FolderOpen className="mr-2 h-4 w-4" />
-                          Ver Expediente
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                
+                {/* M6: Acciones visibles en hover */}
+                <TableCell className="text-right py-3">
+                  <div 
+                    className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <TooltipProvider>
+                      <Tooltip delayDuration={200}>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                            onClick={() => onView?.(document)}
+                            aria-label="Vista rápida"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Vista rápida</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    
+                    <TooltipProvider>
+                      <Tooltip delayDuration={200}>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-slate-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30"
+                            onClick={() => onDownload?.(document)}
+                            aria-label="Descargar documento"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Descargar</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    
+                    {document.expediente && (
+                      <TooltipProvider>
+                        <Tooltip delayDuration={200}>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-slate-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30"
+                              onClick={() => onViewExpediente?.(document.expediente!.id)}
+                              aria-label="Ver expediente"
+                            >
+                              <FolderOpen className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Ver expediente</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -237,10 +271,15 @@ export default function SearchResultsTable({
         </Table>
       </div>
 
+      {/* Paginación con mejor contraste */}
       {pagination && pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-700 pt-4">
+        <nav 
+          className="flex items-center justify-between border-t border-slate-200 dark:border-slate-700 pt-4"
+          aria-label="Navegación de páginas"
+        >
           <div className="text-sm text-slate-600 dark:text-slate-300">
-            Página {pagination.page} de {pagination.totalPages}
+            Página <span className="font-medium text-slate-900 dark:text-white">{pagination.page}</span> de{' '}
+            <span className="font-medium text-slate-900 dark:text-white">{pagination.totalPages}</span>
           </div>
           <div className="flex gap-2">
             <Button
@@ -248,7 +287,9 @@ export default function SearchResultsTable({
               size="sm"
               onClick={() => onPageChange && onPageChange(pagination.page - 1)}
               disabled={pagination.page <= 1}
-              className="border-slate-200 dark:border-slate-700"
+              className="border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700
+                         disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Página anterior"
             >
               <ChevronLeft className="h-4 w-4 mr-1" />
               Anterior
@@ -258,13 +299,15 @@ export default function SearchResultsTable({
               size="sm"
               onClick={() => onPageChange && onPageChange(pagination.page + 1)}
               disabled={pagination.page >= pagination.totalPages}
-              className="border-slate-200 dark:border-slate-700"
+              className="border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700
+                         disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Página siguiente"
             >
               Siguiente
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
-        </div>
+        </nav>
       )}
     </div>
   );
