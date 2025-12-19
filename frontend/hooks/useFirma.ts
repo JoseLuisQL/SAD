@@ -284,6 +284,16 @@ export function useFirma() {
     }
   };
 
+  const cancelSignature = () => {
+    console.log('Cancelando proceso de firma...');
+    if (typeof window.signatureCancel === 'function') {
+      window.signatureCancel();
+    }
+    setProgressState('idle');
+    setProgressMessage('');
+    setLoading(false);
+  };
+
   return { 
     signDocument, 
     loading,
@@ -294,6 +304,7 @@ export function useFirma() {
     fetchAllFlows, 
     fetchPendingFlows, 
     createFlow, 
-    cancelFlow 
+    cancelFlow,
+    cancelSignature
   };
 }
