@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { subDays } from 'date-fns';
+import { subDays, format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import MetricsCards from '@/components/firma/analytics/MetricsCards';
@@ -10,10 +11,8 @@ import DistributionChart from '@/components/firma/analytics/DistributionChart';
 import TopSignersTable from '@/components/firma/analytics/TopSignersTable';
 import ActivityTimeline from '@/components/firma/analytics/ActivityTimeline';
 import AnalyticsFilters from '@/components/firma/analytics/AnalyticsFilters';
-import ExportReportModal from '@/components/firma/analytics/ExportReportModal';
 import { BarChart3, RefreshCw, HelpCircle } from 'lucide-react';
 import { useOnboarding } from '@/hooks/useOnboarding';
-import { Button } from '@/components/ui/button';
 
 interface Metrics {
   totalSignatures: number;
@@ -47,6 +46,17 @@ interface TopSigner {
   lastSignatureDate: Date | null;
 }
 
+const defaultMetrics: Metrics = {
+  totalSignatures: 0,
+  averagePerDay: 0,
+  documentsSigned: 0,
+  documentsUnsigned: 0,
+  adoptionRate: 0,
+  averageFlowCompletionTime: 0,
+  totalReversions: 0,
+  pendingFlows: 0,
+};
+
 export default function AnalyticsPage() {
   const [dateFrom, setDateFrom] = useState(subDays(new Date(), 30));
   const [dateTo, setDateTo] = useState(new Date());
@@ -58,7 +68,6 @@ export default function AnalyticsPage() {
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showExportModal, setShowExportModal] = useState(false);
   
   const { startTour, resetTour } = useOnboarding();
 
@@ -99,7 +108,7 @@ export default function AnalyticsPage() {
     } catch (error: unknown) {
       console.error('Error loading analytics:', error);
       if (!silent) {
-        toast.error('Error al cargar las analíticas');
+        toast.error('Error al cargar las analiticas');
       }
     } finally {
       setLoading(false);
@@ -126,62 +135,61 @@ export default function AnalyticsPage() {
   return (
     <div className="px-6 lg:px-10 py-8 min-h-[calc(100vh-6rem)]">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
+        {/* Header con contexto dinamico */}
         <div className="flex items-center justify-between" data-tour="firma-analytics-header">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 dark:border-blue-500/30 rounded-lg">
-              <BarChart3 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 border border-blue-500/30 rounded-xl">
+              <BarChart3 className="w-7 h-7 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Analítica de Firma Digital</h1>
-              <p className="text-base text-gray-600 dark:text-slate-400">
-                Métricas y estadísticas de uso del sistema de firma
+              <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                Analitica de Firma Digital
+              </h1>
+              <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5">
+                {format(dateFrom, "dd MMM", { locale: es })} - {format(dateTo, "dd MMM yyyy", { locale: es })}
+                <span className="mx-2 text-gray-300 dark:text-slate-600">|</span>
+                <span className="text-blue-600 dark:text-blue-400 font-medium">
+                  {metrics?.totalSignatures?.toLocaleString() || 0} firmas totales
+                </span>
               </p>
             </div>
           </div>
+          
+          {/* Botones con jerarquia clara */}
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
+            <button
               onClick={handleStartTour}
-              className="gap-2"
+              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-all"
+              aria-label="Iniciar tour de ayuda"
+              title="Ver guia interactiva"
             >
-              <HelpCircle className="h-4 w-4" />
-              Iniciar Tour
-            </Button>
+              <HelpCircle className="h-5 w-5" />
+            </button>
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-900 dark:text-white bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-all disabled:opacity-50"
+              aria-label="Actualizar datos"
+              title="Actualizar metricas"
             >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-              Actualizar
+              <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Filters - Ya incluye exportacion */}
         <div data-tour="firma-analytics-filters">
           <AnalyticsFilters
             dateFrom={dateFrom}
             dateTo={dateTo}
             onDateRangeChange={handleDateRangeChange}
-            onExport={() => setShowExportModal(true)}
+            onExport={() => {}}
           />
         </div>
 
         {/* Metrics Cards */}
         <div data-tour="firma-analytics-metrics">
-          <MetricsCards metrics={metrics || {
-          totalSignatures: 0,
-          averagePerDay: 0,
-          documentsSigned: 0,
-          documentsUnsigned: 0,
-          adoptionRate: 0,
-          averageFlowCompletionTime: 0,
-          totalReversions: 0,
-          pendingFlows: 0,
-        }} loading={loading} />
+          <MetricsCards metrics={metrics || defaultMetrics} loading={loading} />
         </div>
 
         {/* Trend Chart */}
@@ -196,15 +204,9 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Activity Timeline */}
-        <ActivityTimeline dateFrom={dateFrom} dateTo={dateTo} />
-
-        {/* Export Modal */}
-        <ExportReportModal
-          isOpen={showExportModal}
-          onClose={() => setShowExportModal(false)}
-          dateFrom={dateFrom}
-          dateTo={dateTo}
-        />
+        <div data-tour="firma-analytics-activity">
+          <ActivityTimeline dateFrom={dateFrom} dateTo={dateTo} />
+        </div>
       </div>
     </div>
   );

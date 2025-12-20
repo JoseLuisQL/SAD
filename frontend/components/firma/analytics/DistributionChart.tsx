@@ -1,6 +1,6 @@
 'use client';
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { Loader2, PieChart as PieChartIcon } from 'lucide-react';
 
 interface DistributionChartProps {
   data: Array<{
@@ -11,111 +11,115 @@ interface DistributionChartProps {
   loading?: boolean;
 }
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+const COLORS = [
+  '#2563eb', // blue-600
+  '#059669', // emerald-600
+  '#d97706', // amber-600
+  '#dc2626', // red-600
+  '#7c3aed', // violet-600
+  '#db2777', // pink-600
+];
 
 export default function DistributionChart({ data, loading }: DistributionChartProps) {
   if (loading) {
     return (
-      <div className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
-        <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded w-48 mb-4 animate-pulse"></div>
-        <div className="h-[300px] bg-gray-100 dark:bg-slate-800 rounded animate-pulse"></div>
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 p-6">
+        <div className="h-[300px] flex items-center justify-center">
+          <Loader2 className="w-5 h-5 animate-spin text-gray-400 dark:text-slate-500" />
+        </div>
       </div>
     );
   }
 
   if (!data || data.length === 0) {
     return (
-      <div className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Distribución por Tipo de Documento</h3>
-          <p className="text-sm text-gray-600 dark:text-slate-400">No hay datos disponibles</p>
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 p-6">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">
+          Distribucion por Tipo
+        </h3>
+        <div className="h-[260px] flex flex-col items-center justify-center text-center">
+          <PieChartIcon className="w-12 h-12 text-gray-300 dark:text-slate-600 mb-3" />
+          <p className="text-sm text-gray-500 dark:text-slate-400">
+            No hay datos de distribucion
+          </p>
+          <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
+            Las firmas apareceran aqui una vez realizadas
+          </p>
         </div>
       </div>
     );
   }
 
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white dark:bg-slate-800 p-3 rounded-lg border border-gray-200 dark:border-slate-700 shadow-lg">
-          <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">{payload[0].name}</p>
-          <p className="text-sm text-gray-600 dark:text-slate-400">
-            <span className="font-semibold">{payload[0].value}</span> firmas
-          </p>
-          <p className="text-sm text-gray-600 dark:text-slate-400">
-            <span className="font-semibold">{payload[0].payload.percentage.toFixed(1)}%</span> del total
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
+  // Ordenar por count y limitar a 5 principales + "Otros"
+  const sortedData = [...data].sort((a, b) => b.count - a.count);
+  const displayData = sortedData.slice(0, 5);
+  
+  if (sortedData.length > 5) {
+    const othersCount = sortedData.slice(5).reduce((sum, item) => sum + item.count, 0);
+    const othersPercentage = sortedData.slice(5).reduce((sum, item) => sum + item.percentage, 0);
+    displayData.push({
+      documentType: 'Otros tipos',
+      count: othersCount,
+      percentage: othersPercentage,
+    });
+  }
 
-  const chartData = data.map((item) => ({
-    name: item.documentType,
-    value: item.count,
-    percentage: item.percentage,
-  }));
-
-  const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
-    const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-    if (percent < 0.05) return null;
-
-    return (
-      <text
-        x={x}
-        y={y}
-        fill="white"
-        textAnchor={x > cx ? 'start' : 'end'}
-        dominantBaseline="central"
-        fontSize={12}
-        fontWeight="bold"
-      >
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
-    );
-  };
+  const maxCount = Math.max(...displayData.map(d => d.count));
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
-      <div className="mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Distribución por Tipo de Documento</h3>
-        <p className="text-sm text-gray-600 dark:text-slate-400">Distribución de firmas según tipo de documento</p>
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 p-6">
+      <div className="mb-6">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+          Distribucion por Tipo
+        </h3>
+        <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5">
+          Firmas segun tipo de documento
+        </p>
       </div>
 
-      <ResponsiveContainer width="100%" height={300}>
-        <PieChart>
-          <Pie
-            data={chartData}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            label={renderCustomLabel}
-            outerRadius={100}
-            fill="#8884d8"
-            dataKey="value"
-          >
-            {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip content={<CustomTooltip />} />
-          <Legend
-            verticalAlign="bottom"
-            height={36}
-            iconType="circle"
-            formatter={(value, entry: any) => (
-              <span className="text-sm text-gray-700 dark:text-slate-400">
-                {value} ({entry.payload.percentage.toFixed(1)}%)
+      {/* Barras horizontales - Mas accesible que pie chart */}
+      <div className="space-y-4">
+        {displayData.map((item, index) => (
+          <div key={item.documentType} className="group">
+            <div className="flex items-center justify-between text-sm mb-1.5">
+              <span 
+                className="font-medium text-gray-700 dark:text-slate-300 truncate max-w-[60%]" 
+                title={item.documentType}
+              >
+                {item.documentType}
               </span>
-            )}
-          />
-        </PieChart>
-      </ResponsiveContainer>
+              <span className="text-gray-500 dark:text-slate-400 tabular-nums flex-shrink-0 ml-2">
+                {item.count.toLocaleString()}
+                <span className="text-xs ml-1">({item.percentage.toFixed(1)}%)</span>
+              </span>
+            </div>
+            <div className="h-2.5 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500 ease-out"
+                style={{
+                  width: `${(item.count / maxCount) * 100}%`,
+                  backgroundColor: COLORS[index % COLORS.length],
+                }}
+                role="progressbar"
+                aria-valuenow={item.count}
+                aria-valuemin={0}
+                aria-valuemax={maxCount}
+                aria-label={`${item.documentType}: ${item.count} firmas`}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Total */}
+      <div className="mt-6 pt-4 border-t border-gray-100 dark:border-slate-800">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-gray-500 dark:text-slate-400">Total de firmas</span>
+          <span className="font-semibold text-gray-900 dark:text-white tabular-nums">
+            {data.reduce((sum, item) => sum + item.count, 0).toLocaleString()}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

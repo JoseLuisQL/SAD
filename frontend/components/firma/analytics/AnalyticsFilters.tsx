@@ -1,10 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar, Download } from 'lucide-react';
+import { Download, Loader2 } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { subDays, subMonths, startOfMonth, startOfYear, endOfMonth, endOfYear } from 'date-fns';
+import { subDays, startOfMonth, format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import api from '@/lib/api';
+import toast from 'react-hot-toast';
 
 interface AnalyticsFiltersProps {
   dateFrom: Date;
@@ -13,120 +16,172 @@ interface AnalyticsFiltersProps {
   onExport: () => void;
 }
 
+type PresetId = '7d' | '30d' | 'month' | 'custom';
+
+interface QuickRange {
+  id: PresetId;
+  label: string;
+  getDates: () => [Date, Date];
+}
+
+const QUICK_RANGES: QuickRange[] = [
+  { id: '7d', label: '7 dias', getDates: () => [subDays(new Date(), 7), new Date()] },
+  { id: '30d', label: '30 dias', getDates: () => [subDays(new Date(), 30), new Date()] },
+  { id: 'month', label: 'Este mes', getDates: () => [startOfMonth(new Date()), new Date()] },
+];
+
 export default function AnalyticsFilters({
   dateFrom,
   dateTo,
   onDateRangeChange,
-  onExport,
 }: AnalyticsFiltersProps) {
-  const [localDateFrom, setLocalDateFrom] = useState(dateFrom);
-  const [localDateTo, setLocalDateTo] = useState(dateTo);
+  const [activePreset, setActivePreset] = useState<PresetId>('30d');
+  const [exporting, setExporting] = useState(false);
 
-  const handleApply = () => {
-    onDateRangeChange(localDateFrom, localDateTo);
-  };
-
-  const setQuickRange = (from: Date, to: Date) => {
-    setLocalDateFrom(from);
-    setLocalDateTo(to);
+  const handleQuickRange = (range: QuickRange) => {
+    const [from, to] = range.getDates();
+    setActivePreset(range.id);
     onDateRangeChange(from, to);
   };
 
+  const handleCustomDateFrom = (date: Date | null) => {
+    if (date) {
+      setActivePreset('custom');
+      onDateRangeChange(date, dateTo);
+    }
+  };
+
+  const handleCustomDateTo = (date: Date | null) => {
+    if (date) {
+      setActivePreset('custom');
+      onDateRangeChange(dateFrom, date);
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      const response = await api.get('/firma/analytics/export', {
+        params: {
+          type: 'csv',
+          dateFrom: dateFrom.toISOString(),
+          dateTo: dateTo.toISOString(),
+        },
+        responseType: 'blob',
+      });
+
+      const blob = new Blob([response.data]);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `firmas-${format(dateFrom, 'yyyy-MM-dd')}-${format(dateTo, 'yyyy-MM-dd')}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success('Reporte descargado exitosamente');
+    } catch (error: unknown) {
+      console.error('Error exporting report:', error);
+      toast.error('Error al exportar el reporte');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
-      <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-end">
-        {/* Date Range Selectors */}
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
-              Fecha Desde
-            </label>
-            <div className="relative">
-              <DatePicker
-                selected={localDateFrom}
-                onChange={(date) => date && setLocalDateFrom(date)}
-                selectsStart
-                startDate={localDateFrom}
-                endDate={localDateTo}
-                maxDate={localDateTo}
-                dateFormat="dd/MM/yyyy"
-                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholderText="Seleccionar fecha"
-              />
-              <Calendar className="absolute right-3 top-2.5 h-5 w-5 text-gray-400 dark:text-slate-500 pointer-events-none" />
-            </div>
-          </div>
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 p-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        
+        {/* Rangos rapidos - Chips seleccionables */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wide mr-1">
+            Periodo:
+          </span>
+          {QUICK_RANGES.map((range) => (
+            <button
+              key={range.id}
+              onClick={() => handleQuickRange(range)}
+              className={`
+                px-3 py-1.5 text-sm font-medium rounded-full transition-all
+                ${activePreset === range.id
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'
+                }
+              `}
+              aria-pressed={activePreset === range.id}
+            >
+              {range.label}
+            </button>
+          ))}
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
-              Fecha Hasta
-            </label>
-            <div className="relative">
-              <DatePicker
-                selected={localDateTo}
-                onChange={(date) => date && setLocalDateTo(date)}
-                selectsEnd
-                startDate={localDateFrom}
-                endDate={localDateTo}
-                minDate={localDateFrom}
-                maxDate={new Date()}
-                dateFormat="dd/MM/yyyy"
-                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholderText="Seleccionar fecha"
-              />
-              <Calendar className="absolute right-3 top-2.5 h-5 w-5 text-gray-400 dark:text-slate-500 pointer-events-none" />
-            </div>
+        {/* Separador visual */}
+        <div className="hidden sm:block w-px h-8 bg-gray-200 dark:bg-slate-700" />
+
+        {/* Selector de fechas personalizado */}
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <DatePicker
+              selected={dateFrom}
+              onChange={handleCustomDateFrom}
+              maxDate={dateTo}
+              dateFormat="dd/MM/yy"
+              locale={es}
+              className={`
+                w-28 px-3 py-1.5 text-sm border rounded-lg
+                ${activePreset === 'custom' 
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10' 
+                  : 'border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900'
+                }
+                text-gray-900 dark:text-white
+                focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                focus:outline-none
+              `}
+              placeholderText="Desde"
+              aria-label="Fecha desde"
+            />
+          </div>
+          <span className="text-gray-400 dark:text-slate-500">→</span>
+          <div className="relative">
+            <DatePicker
+              selected={dateTo}
+              onChange={handleCustomDateTo}
+              minDate={dateFrom}
+              maxDate={new Date()}
+              dateFormat="dd/MM/yy"
+              locale={es}
+              className={`
+                w-28 px-3 py-1.5 text-sm border rounded-lg
+                ${activePreset === 'custom' 
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10' 
+                  : 'border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900'
+                }
+                text-gray-900 dark:text-white
+                focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                focus:outline-none
+              `}
+              placeholderText="Hasta"
+              aria-label="Fecha hasta"
+            />
           </div>
         </div>
 
-        {/* Quick Range Buttons */}
-        <div className="flex flex-wrap gap-2">
+        {/* Boton de exportacion - Al final, menor jerarquia */}
+        <div className="sm:ml-auto">
           <button
-            onClick={() => setQuickRange(new Date(), new Date())}
-            className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+            onClick={handleExport}
+            disabled={exporting}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Exportar reporte CSV"
+            aria-label="Exportar reporte en formato CSV"
           >
-            Hoy
-          </button>
-          <button
-            onClick={() => setQuickRange(subDays(new Date(), 7), new Date())}
-            className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-          >
-            7 Días
-          </button>
-          <button
-            onClick={() => setQuickRange(subDays(new Date(), 30), new Date())}
-            className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-          >
-            30 Días
-          </button>
-          <button
-            onClick={() => setQuickRange(startOfMonth(new Date()), endOfMonth(new Date()))}
-            className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-          >
-            Este Mes
-          </button>
-          <button
-            onClick={() => setQuickRange(startOfYear(new Date()), endOfYear(new Date()))}
-            className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-          >
-            Este Año
-          </button>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          <button
-            onClick={handleApply}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-          >
-            Aplicar
-          </button>
-          <button
-            onClick={onExport}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
-          >
-            <Download className="w-4 h-4" />
-            Exportar
+            {exporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            <span>CSV</span>
           </button>
         </div>
       </div>
