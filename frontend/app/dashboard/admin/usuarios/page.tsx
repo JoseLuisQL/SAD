@@ -1,18 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { UsersTable } from '@/components/users/UsersTable';
 import { UsersFilters } from '@/components/users/UsersFilters';
 import { UserModal } from '@/components/users/UserModal';
 import { UserDetailModal } from '@/components/users/UserDetailModal';
 import { UsersStats } from '@/components/users/UsersStats';
-import { UsersRoleChart } from '@/components/users/UsersRoleChart';
-import { UsersExportPanel } from '@/components/users/UsersExportPanel';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { useUsers } from '@/hooks/useUsers';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { User, UsersFilters as IUsersFilters, CreateUserData, UpdateUserData } from '@/types/user.types';
-import { UserPlus, Users as UsersIcon } from 'lucide-react';
+import { UserPlus, Users as UsersIcon, Download, FileText, FileSpreadsheet } from 'lucide-react';
 
 export default function UsuariosPage() {
   const { 
@@ -33,20 +38,50 @@ export default function UsuariosPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [currentFilters, setCurrentFilters] = useState<IUsersFilters>({ page: 1, limit: 10 });
   const [exporting, setExporting] = useState(false);
+  const [hasActiveFilters, setHasActiveFilters] = useState(false);
 
   useEffect(() => {
     fetchUsers(currentFilters);
     fetchStats();
   }, [fetchUsers, fetchStats, currentFilters]);
 
-  const openCreateModal = () => {
+  const openCreateModal = useCallback(() => {
     setModalMode('create');
     setSelectedUser(null);
     setModalOpen(true);
-  };
+  }, []);
+
+  const closeModal = useCallback(() => {
+    setModalOpen(false);
+    setSelectedUser(null);
+  }, []);
+
+  const closeDetailModal = useCallback(() => {
+    setDetailModalOpen(false);
+    setSelectedUser(null);
+  }, []);
+
+  const closeDeleteDialog = useCallback(() => {
+    setDeleteDialogOpen(false);
+    setUserToDelete(null);
+  }, []);
+
+  // Atajos de teclado
+  useKeyboardShortcuts({
+    create: openCreateModal,
+    close: () => {
+      if (deleteDialogOpen) {
+        closeDeleteDialog();
+      } else if (detailModalOpen) {
+        closeDetailModal();
+      } else if (modalOpen) {
+        closeModal();
+      }
+    },
+  });
 
   const openEditModal = (user: User) => {
     setModalMode('edit');
@@ -54,19 +89,12 @@ export default function UsuariosPage() {
     setModalOpen(true);
   };
 
-  const closeModal = () => {
-    setModalOpen(false);
-    setSelectedUser(null);
-  };
-
   const openDeleteDialog = (userId: string) => {
-    setUserToDelete(userId);
-    setDeleteDialogOpen(true);
-  };
-
-  const closeDeleteDialog = () => {
-    setDeleteDialogOpen(false);
-    setUserToDelete(null);
+    const user = users.find(u => u.id === userId);
+    if (user) {
+      setUserToDelete(user);
+      setDeleteDialogOpen(true);
+    }
   };
 
   const handleSave = async (data: CreateUserData | UpdateUserData) => {
@@ -79,7 +107,7 @@ export default function UsuariosPage() {
 
   const handleDelete = async () => {
     if (userToDelete) {
-      await deleteUser(userToDelete);
+      await deleteUser(userToDelete.id);
       closeDeleteDialog();
     }
   };
@@ -101,11 +129,6 @@ export default function UsuariosPage() {
     setDetailModalOpen(true);
   };
 
-  const closeDetailModal = () => {
-    setDetailModalOpen(false);
-    setSelectedUser(null);
-  };
-
   const handleExport = async (format: 'csv' | 'excel') => {
     setExporting(true);
     try {
@@ -120,60 +143,81 @@ export default function UsuariosPage() {
     openEditModal(user);
   };
 
+  const handleClearFilters = () => {
+    setCurrentFilters({ page: 1, limit: pagination.limit });
+    setHasActiveFilters(false);
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header simplificado */}
+      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <UsersIcon className="h-8 w-8" />
-            Gestión de Usuarios
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <UsersIcon className="h-6 w-6" aria-hidden="true" />
+            Usuarios
           </h1>
-          <p className="text-gray-600 dark:text-slate-400 mt-2">
-            Administre los usuarios del sistema y sus permisos
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
+            {stats.totalUsers} usuarios registrados en el sistema
           </p>
         </div>
-        <Button onClick={openCreateModal} data-tour="usuarios-create-button">
-          <UserPlus className="mr-2 h-4 w-4" />
-          Crear Usuario
-        </Button>
-      </div>
+        
+        <div className="flex items-center gap-2">
+          {/* Dropdown de exportación */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm"
+                disabled={exporting || users.length === 0}
+                className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {exporting ? 'Exportando...' : 'Exportar'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="dark:bg-slate-800 dark:border-slate-700">
+              <DropdownMenuItem 
+                onClick={() => handleExport('csv')}
+                className="dark:text-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Exportar CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleExport('excel')}
+                className="dark:text-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+              >
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Exportar Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-      <div data-tour="usuarios-stats">
+          {/* Botón crear usuario */}
+          <Button onClick={openCreateModal} data-tour="usuarios-create-button">
+            <UserPlus className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Nuevo Usuario</span>
+            <span className="sm:hidden">Nuevo</span>
+          </Button>
+        </div>
+      </header>
+
+      {/* Estadísticas compactas */}
+      <section data-tour="usuarios-stats" aria-label="Estadísticas de usuarios">
         <UsersStats stats={stats} />
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <UsersRoleChart data={stats.usersByRole} />
-        </div>
-        <div className="space-y-4">
-          <UsersExportPanel onExport={handleExport} exporting={exporting} />
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Usuarios Recientes
-            </h3>
-            <div className="space-y-2">
-              {stats.recentUsers?.slice(0, 5).map((user: User) => (
-                <div key={user.id} className="flex items-center gap-2 text-sm">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center text-blue-600 dark:text-blue-400 font-medium text-xs">
-                    {user.firstName[0]}{user.lastName[0]}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900 dark:text-slate-100">{user.firstName} {user.lastName}</p>
-                    <p className="text-xs text-gray-500 dark:text-slate-400">{user.role.name}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Filtros */}
+      <section data-tour="usuarios-search" aria-label="Filtros de búsqueda">
+        <UsersFilters 
+          onFilter={handleFilter} 
+          onActiveFiltersChange={setHasActiveFilters}
+        />
+      </section>
 
-      <div data-tour="usuarios-search">
-        <UsersFilters onFilter={handleFilter} />
-      </div>
-
-      <div data-tour="usuarios-table">
+      {/* Tabla de usuarios */}
+      <section data-tour="usuarios-table" aria-label="Lista de usuarios">
         <UsersTable
           users={users}
           loading={loading}
@@ -183,9 +227,13 @@ export default function UsuariosPage() {
           onViewDetails={openDetailModal}
           onPageChange={handlePageChange}
           onLimitChange={handleLimitChange}
+          onCreateUser={openCreateModal}
+          onClearFilters={handleClearFilters}
+          hasActiveFilters={hasActiveFilters}
         />
-      </div>
+      </section>
 
+      {/* Modal de crear/editar */}
       <UserModal
         open={modalOpen}
         mode={modalMode}
@@ -194,6 +242,7 @@ export default function UsuariosPage() {
         onSave={handleSave}
       />
 
+      {/* Modal de detalles */}
       <UserDetailModal
         open={detailModalOpen}
         user={selectedUser}
@@ -201,10 +250,28 @@ export default function UsuariosPage() {
         onEdit={handleEditFromDetail}
       />
 
+      {/* Diálogo de confirmación de eliminación mejorado */}
       <ConfirmDialog
         open={deleteDialogOpen}
         title="Eliminar Usuario"
-        message="¿Está seguro que desea eliminar este usuario? Esta acción desactivará al usuario en el sistema."
+        message={
+          userToDelete ? (
+            <div className="space-y-3">
+              <p>¿Está seguro que desea eliminar al usuario:</p>
+              <div className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg">
+                <p className="font-semibold text-gray-900 dark:text-white">
+                  {userToDelete.firstName} {userToDelete.lastName}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-slate-400">
+                  @{userToDelete.username} • {userToDelete.email}
+                </p>
+              </div>
+              <p className="text-sm text-amber-600 dark:text-amber-400">
+                El usuario será desactivado y no podrá acceder al sistema.
+              </p>
+            </div>
+          ) : 'Esta acción desactivará al usuario en el sistema.'
+        }
         variant="danger"
         onConfirm={handleDelete}
         onCancel={closeDeleteDialog}

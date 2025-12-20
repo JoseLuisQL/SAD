@@ -1,5 +1,7 @@
-import { Users, UserCheck, Shield, UserCog } from 'lucide-react';
-import { MetricCard } from '@/components/shared/MetricCard';
+'use client';
+
+import { Users, UserCheck, UserX, Shield, LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface UsersStatsProps {
   stats: {
@@ -10,36 +12,68 @@ interface UsersStatsProps {
   };
 }
 
+interface StatCardProps {
+  label: string;
+  value: number;
+  icon: LucideIcon;
+  variant?: 'default' | 'success' | 'muted' | 'info';
+}
+
+const variantClasses = {
+  default: 'text-gray-600 dark:text-slate-400',
+  success: 'text-emerald-600 dark:text-emerald-400',
+  muted: 'text-gray-400 dark:text-slate-500',
+  info: 'text-blue-600 dark:text-blue-400',
+};
+
+function StatCard({ label, value, icon: Icon, variant = 'default' }: StatCardProps) {
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4 transition-colors hover:border-gray-300 dark:hover:border-slate-600">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">
+            {value}
+          </p>
+          <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+            {label}
+          </p>
+        </div>
+        <Icon className={cn('h-5 w-5', variantClasses[variant])} aria-hidden="true" />
+      </div>
+    </div>
+  );
+}
+
 export function UsersStats({ stats }: UsersStatsProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <MetricCard
-        title="Total de Usuarios"
+    <div 
+      className="grid grid-cols-2 lg:grid-cols-4 gap-3"
+      role="region"
+      aria-label="Estadísticas de usuarios"
+    >
+      <StatCard
+        label="Total"
         value={stats.totalUsers}
         icon={Users}
-        color="blue"
-        description="usuarios registrados"
+        variant="default"
       />
-      <MetricCard
-        title="Usuarios Activos"
+      <StatCard
+        label="Activos"
         value={stats.activeUsers}
         icon={UserCheck}
-        color="green"
-        description={`Inactivos: ${stats.inactiveUsers}`}
+        variant="success"
       />
-      <MetricCard
-        title="Administradores"
-        value={stats.usersByRole.find(r => r.roleName === 'Administrador')?.count || 0}
+      <StatCard
+        label="Inactivos"
+        value={stats.inactiveUsers}
+        icon={UserX}
+        variant="muted"
+      />
+      <StatCard
+        label="Roles"
+        value={stats.usersByRole.length}
         icon={Shield}
-        color="violet"
-        description="con acceso total"
-      />
-      <MetricCard
-        title="Operadores"
-        value={stats.usersByRole.find(r => r.roleName === 'Operador')?.count || 0}
-        icon={UserCog}
-        color="amber"
-        description="con permisos limitados"
+        variant="info"
       />
     </div>
   );
