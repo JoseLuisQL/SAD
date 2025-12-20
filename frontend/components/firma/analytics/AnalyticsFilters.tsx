@@ -8,6 +8,13 @@ import { subDays, startOfMonth, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
+import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface AnalyticsFiltersProps {
   dateFrom: Date;
@@ -21,13 +28,14 @@ type PresetId = '7d' | '30d' | 'month' | 'custom';
 interface QuickRange {
   id: PresetId;
   label: string;
+  shortLabel: string;
   getDates: () => [Date, Date];
 }
 
 const QUICK_RANGES: QuickRange[] = [
-  { id: '7d', label: '7 dias', getDates: () => [subDays(new Date(), 7), new Date()] },
-  { id: '30d', label: '30 dias', getDates: () => [subDays(new Date(), 30), new Date()] },
-  { id: 'month', label: 'Este mes', getDates: () => [startOfMonth(new Date()), new Date()] },
+  { id: '7d', label: '7 dias', shortLabel: '7d', getDates: () => [subDays(new Date(), 7), new Date()] },
+  { id: '30d', label: '30 dias', shortLabel: '30d', getDates: () => [subDays(new Date(), 30), new Date()] },
+  { id: 'month', label: 'Este mes', shortLabel: 'Mes', getDates: () => [startOfMonth(new Date()), new Date()] },
 ];
 
 export default function AnalyticsFilters({
@@ -70,7 +78,7 @@ export default function AnalyticsFilters({
         responseType: 'blob',
       });
 
-      const blob = new Blob([response.data]);
+      const blob = new Blob([response.data as BlobPart]);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -93,8 +101,8 @@ export default function AnalyticsFilters({
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 p-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
         
-        {/* Rangos rapidos - Chips seleccionables */}
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Rangos rapidos - Chips con seleccion clara */}
+        <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="Seleccion de periodo">
           <span className="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wide mr-1">
             Periodo:
           </span>
@@ -102,22 +110,25 @@ export default function AnalyticsFilters({
             <button
               key={range.id}
               onClick={() => handleQuickRange(range)}
-              className={`
-                px-3 py-1.5 text-sm font-medium rounded-full transition-all
-                ${activePreset === range.id
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'
-                }
-              `}
+              className={cn(
+                "px-4 py-2 text-sm font-medium rounded-full transition-all",
+                "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+                activePreset === range.id
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-300 border border-gray-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-gray-50 dark:hover:bg-slate-700"
+              )}
               aria-pressed={activePreset === range.id}
+              role="radio"
+              aria-checked={activePreset === range.id}
             >
-              {range.label}
+              <span className="hidden sm:inline">{range.label}</span>
+              <span className="sm:hidden">{range.shortLabel}</span>
             </button>
           ))}
         </div>
 
         {/* Separador visual */}
-        <div className="hidden sm:block w-px h-8 bg-gray-200 dark:bg-slate-700" />
+        <div className="hidden sm:block w-px h-8 bg-gray-200 dark:bg-slate-700" aria-hidden="true" />
 
         {/* Selector de fechas personalizado */}
         <div className="flex items-center gap-2">
@@ -128,21 +139,19 @@ export default function AnalyticsFilters({
               maxDate={dateTo}
               dateFormat="dd/MM/yy"
               locale={es}
-              className={`
-                w-28 px-3 py-1.5 text-sm border rounded-lg
-                ${activePreset === 'custom' 
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10' 
-                  : 'border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900'
-                }
-                text-gray-900 dark:text-white
-                focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                focus:outline-none
-              `}
+              className={cn(
+                "w-28 px-3 py-2 text-sm border rounded-lg transition-colors",
+                "bg-white dark:bg-slate-900 text-gray-900 dark:text-white",
+                "focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none",
+                activePreset === 'custom' 
+                  ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10" 
+                  : "border-gray-300 dark:border-slate-700"
+              )}
               placeholderText="Desde"
               aria-label="Fecha desde"
             />
           </div>
-          <span className="text-gray-400 dark:text-slate-500">→</span>
+          <span className="text-gray-400 dark:text-slate-500 font-medium">-</span>
           <div className="relative">
             <DatePicker
               selected={dateTo}
@@ -151,38 +160,50 @@ export default function AnalyticsFilters({
               maxDate={new Date()}
               dateFormat="dd/MM/yy"
               locale={es}
-              className={`
-                w-28 px-3 py-1.5 text-sm border rounded-lg
-                ${activePreset === 'custom' 
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10' 
-                  : 'border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900'
-                }
-                text-gray-900 dark:text-white
-                focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                focus:outline-none
-              `}
+              className={cn(
+                "w-28 px-3 py-2 text-sm border rounded-lg transition-colors",
+                "bg-white dark:bg-slate-900 text-gray-900 dark:text-white",
+                "focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none",
+                activePreset === 'custom' 
+                  ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10" 
+                  : "border-gray-300 dark:border-slate-700"
+              )}
               placeholderText="Hasta"
               aria-label="Fecha hasta"
             />
           </div>
         </div>
 
-        {/* Boton de exportacion - Al final, menor jerarquia */}
+        {/* Boton de exportacion - Menos prominente */}
         <div className="sm:ml-auto">
-          <button
-            onClick={handleExport}
-            disabled={exporting}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Exportar reporte CSV"
-            aria-label="Exportar reporte en formato CSV"
-          >
-            {exporting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Download className="w-4 h-4" />
-            )}
-            <span>CSV</span>
-          </button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleExport}
+                  disabled={exporting}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors",
+                    "text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white",
+                    "hover:bg-gray-100 dark:hover:bg-slate-800",
+                    "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+                    "disabled:opacity-50 disabled:cursor-not-allowed"
+                  )}
+                  aria-label="Exportar reporte en formato CSV"
+                >
+                  {exporting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  <span className="hidden sm:inline">CSV</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>Descargar datos como CSV</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
     </div>

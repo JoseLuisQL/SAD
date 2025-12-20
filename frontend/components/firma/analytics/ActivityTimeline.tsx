@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 interface Activity {
   id: string;
@@ -53,7 +54,8 @@ export default function ActivityTimeline({ dateFrom, dateTo }: ActivityTimelineP
       }
 
       allActivities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-      setActivities(allActivities.slice(0, 6));
+      // Mostrar solo 5 elementos - ISO 25010: Estetica de interfaz (minimalismo)
+      setActivities(allActivities.slice(0, 5));
     } catch (error) {
       console.error('Error loading activities:', error);
     } finally {
@@ -63,9 +65,9 @@ export default function ActivityTimeline({ dateFrom, dateTo }: ActivityTimelineP
 
   const getIcon = (type: Activity['type']) => {
     const iconClasses = {
-      SIGNATURE: 'bg-blue-100 dark:bg-blue-500/20',
-      FLOW_COMPLETED: 'bg-green-100 dark:bg-green-500/20',
-      REVERSION: 'bg-red-100 dark:bg-red-500/20',
+      SIGNATURE: 'bg-blue-50 dark:bg-blue-500/10',
+      FLOW_COMPLETED: 'bg-green-50 dark:bg-green-500/10',
+      REVERSION: 'bg-red-50 dark:bg-red-500/10',
     };
 
     const icons = {
@@ -75,7 +77,13 @@ export default function ActivityTimeline({ dateFrom, dateTo }: ActivityTimelineP
     };
 
     return (
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${iconClasses[type] || 'bg-gray-100 dark:bg-slate-800'}`}>
+      <div 
+        className={cn(
+          "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
+          iconClasses[type] || 'bg-gray-100 dark:bg-slate-800'
+        )}
+        aria-hidden="true"
+      >
         {icons[type] || <Clock className="w-4 h-4 text-gray-600 dark:text-slate-400" />}
       </div>
     );
@@ -95,13 +103,11 @@ export default function ActivityTimeline({ dateFrom, dateTo }: ActivityTimelineP
   if (activities.length === 0) {
     return (
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 p-6">
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-            Actividad Reciente
-          </h3>
-        </div>
-        <div className="mt-6 text-center py-8">
-          <Clock className="w-10 h-10 text-gray-300 dark:text-slate-600 mx-auto mb-2" />
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">
+          Actividad Reciente
+        </h3>
+        <div className="h-[180px] flex flex-col items-center justify-center text-center">
+          <Clock className="w-10 h-10 text-gray-300 dark:text-slate-600 mb-2" />
           <p className="text-sm text-gray-500 dark:text-slate-400">
             Sin actividad en este periodo
           </p>
@@ -124,28 +130,30 @@ export default function ActivityTimeline({ dateFrom, dateTo }: ActivityTimelineP
         </span>
       </div>
 
-      {/* Timeline horizontal compacto */}
-      <div className="space-y-1">
-        {activities.map((activity) => (
+      {/* Timeline compacto */}
+      <div className="space-y-0" role="list" aria-label="Linea de tiempo de actividad">
+        {activities.map((activity, index) => (
           <div
             key={activity.id}
-            className="flex items-center gap-3 py-2.5 px-3 -mx-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors"
+            className={cn(
+              "flex items-center gap-3 py-2.5",
+              index !== activities.length - 1 && "border-b border-gray-50 dark:border-slate-800"
+            )}
+            role="listitem"
           >
             {/* Icono segun tipo */}
             {getIcon(activity.type)}
 
             {/* Descripcion */}
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-gray-900 dark:text-white">
-                <span className="font-medium">{activity.userName}</span>
-                {' '}
-                <span className="text-gray-600 dark:text-slate-400">{activity.description}</span>
+              <p className="text-sm text-gray-900 dark:text-white truncate">
+                {activity.description}
               </p>
             </div>
 
             {/* Tiempo relativo */}
             <time 
-              className="text-xs text-gray-400 dark:text-slate-500 flex-shrink-0"
+              className="text-xs text-gray-400 dark:text-slate-500 flex-shrink-0 tabular-nums"
               dateTime={activity.timestamp.toISOString()}
             >
               {formatDistanceToNow(activity.timestamp, { addSuffix: true, locale: es })}
