@@ -16,7 +16,6 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Load collapsed state from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
     if (stored !== null) {
@@ -24,7 +23,6 @@ export default function DashboardLayout({
     }
   }, []);
 
-  // Save collapsed state to localStorage when it changes
   const handleToggleCollapse = () => {
     const newCollapsedState = !sidebarCollapsed;
     setSidebarCollapsed(newCollapsedState);
@@ -37,6 +35,12 @@ export default function DashboardLayout({
     <ProtectedRoute>
       <OnboardingProvider>
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+          <a 
+            href="#main-content" 
+            className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[60] focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-lg focus:shadow-lg focus:outline-none"
+          >
+            Saltar al contenido principal
+          </a>
           <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
           <Sidebar 
             isOpen={sidebarOpen} 
@@ -44,8 +48,12 @@ export default function DashboardLayout({
             isCollapsed={sidebarCollapsed}
             onToggleCollapse={handleToggleCollapse}
           />
-          <main className={`${mainPaddingLeft} pt-20 transition-[padding] duration-200`}>
-            <div className="p-6">
+          <main 
+            id="main-content"
+            className={`${mainPaddingLeft} pt-20 transition-[padding] duration-200`}
+            role="main"
+          >
+            <div className="p-4 md:p-6">
               {children}
             </div>
           </main>

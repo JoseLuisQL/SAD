@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { AlertTriangle, AlertCircle, Info } from 'lucide-react';
+import { AlertTriangle, AlertCircle, Info, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { DashboardAlert } from '@/lib/api/dashboard';
@@ -14,25 +14,25 @@ interface AlertsPanelProps {
 const severityConfig = {
   high: {
     icon: AlertTriangle,
-    color: 'text-red-600',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
+    color: 'text-rose-600 dark:text-rose-400',
+    bgColor: 'bg-rose-50 dark:bg-rose-950/30',
+    borderColor: 'border-rose-200 dark:border-rose-800/50',
     badge: 'destructive' as const,
     label: 'Alta',
   },
   medium: {
     icon: AlertCircle,
-    color: 'text-amber-600',
-    bgColor: 'bg-amber-50',
-    borderColor: 'border-amber-200',
+    color: 'text-amber-600 dark:text-amber-400',
+    bgColor: 'bg-amber-50 dark:bg-amber-950/30',
+    borderColor: 'border-amber-200 dark:border-amber-800/50',
     badge: 'secondary' as const,
     label: 'Media',
   },
   low: {
     icon: Info,
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200',
+    color: 'text-blue-600 dark:text-blue-400',
+    bgColor: 'bg-blue-50 dark:bg-blue-950/30',
+    borderColor: 'border-blue-200 dark:border-blue-800/50',
     badge: 'default' as const,
     label: 'Baja',
   },
@@ -47,22 +47,22 @@ const alertLinks: Record<string, string> = {
 export function AlertsPanel({ alerts }: AlertsPanelProps) {
   if (alerts.length === 0) {
     return (
-      <Card className="border border-gray-200 dark:border-slate-700 shadow-sm bg-white dark:bg-slate-900">
-        <CardHeader className="bg-white dark:bg-slate-900">
+      <Card className="border border-slate-200 dark:border-slate-700 shadow-sm bg-white dark:bg-slate-900">
+        <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold text-slate-900 dark:text-white">
             Alertas del Sistema
           </CardTitle>
         </CardHeader>
-        <CardContent className="bg-white dark:bg-slate-900">
+        <CardContent>
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-950 rounded-full mb-3">
-              <Info className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 rounded-full mb-3">
+              <CheckCircle2 className="h-6 w-6 text-emerald-500 dark:text-emerald-400" />
             </div>
-            <p className="text-sm font-medium text-slate-900 dark:text-white">
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
               No hay alertas pendientes
             </p>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-              El sistema está funcionando correctamente
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              El sistema esta funcionando correctamente
             </p>
           </div>
         </CardContent>
@@ -71,17 +71,17 @@ export function AlertsPanel({ alerts }: AlertsPanelProps) {
   }
 
   return (
-    <Card className="border border-gray-200 dark:border-slate-700 shadow-sm bg-white dark:bg-slate-900">
-      <CardHeader className="bg-white dark:bg-slate-900">
+    <Card className="border border-slate-200 dark:border-slate-700 shadow-sm bg-white dark:bg-slate-900">
+      <CardHeader className="pb-2">
         <CardTitle className="text-base font-semibold text-slate-900 dark:text-white flex items-center justify-between">
           <span>Alertas del Sistema</span>
-          <Badge variant="secondary" className="ml-2">
+          <Badge variant="secondary" className="ml-2 text-xs">
             {alerts.length}
           </Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="bg-white dark:bg-slate-900">
-        <div className="space-y-3">
+      <CardContent>
+        <div className="space-y-2">
           {alerts.map((alert) => {
             const config = severityConfig[alert.severity];
             const Icon = config.icon;
@@ -89,11 +89,12 @@ export function AlertsPanel({ alerts }: AlertsPanelProps) {
 
             const content = (
               <div
+                role={href ? 'link' : undefined}
                 className={cn(
-                  'flex items-start gap-3 p-3 rounded-lg border transition-colors',
+                  'flex items-start gap-3 p-3 rounded-lg border transition-all duration-200',
                   config.bgColor,
                   config.borderColor,
-                  href && 'cursor-pointer hover:shadow-sm'
+                  href && 'cursor-pointer hover:shadow-sm hover:scale-[1.01]'
                 )}
               >
                 <div className={cn('p-1.5 rounded-full bg-white dark:bg-slate-800', config.color)}>
@@ -101,14 +102,14 @@ export function AlertsPanel({ alerts }: AlertsPanelProps) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                       {alert.title}
                     </p>
-                    <Badge variant={config.badge} className="shrink-0 text-xs">
+                    <Badge variant={config.badge} className="shrink-0 text-[10px] px-1.5 py-0">
                       {config.label}
                     </Badge>
                   </div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
                     {alert.description}
                   </p>
                 </div>
