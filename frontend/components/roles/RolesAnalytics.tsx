@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Shield, Users, Activity, BarChart3 } from 'lucide-react';
+import { Shield, Users, Activity, BarChart3, Loader2 } from 'lucide-react';
 import { useRoles } from '@/hooks/useRoles';
 
 interface AnalyticsData {
@@ -36,17 +35,11 @@ export default function RolesAnalytics() {
 
   if (loading) {
     return (
-      <div className="grid gap-4 md:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
-          <Card key={i} className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
-            <CardContent className="p-6">
-              <div className="animate-pulse">
-                <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-3/4 mb-2"></div>
-                <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded w-1/2"></div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="flex items-center justify-center py-16">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 dark:text-blue-400" />
+          <span className="text-sm text-gray-500 dark:text-slate-400">Cargando estadisticas...</span>
+        </div>
       </div>
     );
   }
@@ -55,137 +48,103 @@ export default function RolesAnalytics() {
     return null;
   }
 
+  const metrics = [
+    { label: 'Roles', value: analytics.totalRoles, desc: 'configurados', icon: Shield },
+    { label: 'Usuarios', value: analytics.totalUsers, desc: 'con rol asignado', icon: Users },
+    { label: 'Promedio', value: analytics.avgPermissionsPerRole, desc: 'permisos por rol', icon: Activity },
+    { label: 'Modulos', value: Object.keys(analytics.permissionsDistribution).length, desc: 'con permisos', icon: BarChart3 },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-700 dark:text-slate-300">Total de Roles</CardTitle>
-            <Shield className="h-4 w-4 text-gray-600 dark:text-slate-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{analytics.totalRoles}</div>
-            <p className="text-xs text-gray-600 dark:text-slate-400 font-medium">
-              Roles configurados
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-700 dark:text-slate-300">Usuarios con Rol</CardTitle>
-            <Users className="h-4 w-4 text-gray-600 dark:text-slate-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{analytics.totalUsers}</div>
-            <p className="text-xs text-gray-600 dark:text-slate-400 font-medium">
-              Asignaciones activas
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-700 dark:text-slate-300">Promedio Permisos</CardTitle>
-            <Activity className="h-4 w-4 text-gray-600 dark:text-slate-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{analytics.avgPermissionsPerRole}</div>
-            <p className="text-xs text-gray-600 dark:text-slate-400 font-medium">
-              Módulos por rol
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-700 dark:text-slate-300">Módulos Usados</CardTitle>
-            <BarChart3 className="h-4 w-4 text-gray-600 dark:text-slate-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">
-              {Object.keys(analytics.permissionsDistribution).length}
+      {/* Metricas principales */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {metrics.map((metric) => {
+          const IconComponent = metric.icon;
+          return (
+            <div 
+              key={metric.label}
+              className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700"
+            >
+              <div className="flex items-center gap-2 text-gray-500 dark:text-slate-400 mb-1">
+                <IconComponent className="h-4 w-4" />
+                <span className="text-xs font-medium">{metric.label}</span>
+              </div>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                {metric.value}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-slate-400">
+                {metric.desc}
+              </p>
             </div>
-            <p className="text-xs text-gray-600 dark:text-slate-400 font-medium">
-              Módulos con permisos
-            </p>
-          </CardContent>
-        </Card>
+          );
+        })}
       </div>
 
+      {/* Distribuciones */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-gray-900 dark:text-white">Distribución de Usuarios por Rol</CardTitle>
-            <CardDescription className="text-gray-600 dark:text-slate-400 font-medium">
-              Cantidad de usuarios asignados a cada rol
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {analytics.usersDistribution.map((item) => {
-                const percentage = analytics.totalUsers > 0 
-                  ? (item.userCount / analytics.totalUsers) * 100 
+        {/* Usuarios por rol */}
+        <div className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700">
+          <h3 className="font-medium text-gray-900 dark:text-white mb-1">Usuarios por Rol</h3>
+          <p className="text-xs text-gray-500 dark:text-slate-400 mb-4">Distribucion de asignaciones</p>
+          <div className="space-y-3">
+            {analytics.usersDistribution.map((item) => {
+              const percentage = analytics.totalUsers > 0 
+                ? (item.userCount / analytics.totalUsers) * 100 
+                : 0;
+
+              return (
+                <div key={item.roleName}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">{item.roleName}</span>
+                    <span className="text-xs text-gray-500 dark:text-slate-400">
+                      {item.userCount}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-100 dark:bg-slate-800 rounded-full h-1.5">
+                    <div
+                      className="bg-blue-500 dark:bg-blue-400 h-1.5 rounded-full transition-all"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Modulos mas usados */}
+        <div className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700">
+          <h3 className="font-medium text-gray-900 dark:text-white mb-1">Modulos Populares</h3>
+          <p className="text-xs text-gray-500 dark:text-slate-400 mb-4">Los 5 modulos mas usados</p>
+          <div className="space-y-3">
+            {Object.entries(analytics.permissionsDistribution)
+              .sort(([, a], [, b]) => b - a)
+              .slice(0, 5)
+              .map(([module, count]) => {
+                const percentage = analytics.totalRoles > 0 
+                  ? (count / analytics.totalRoles) * 100 
                   : 0;
 
                 return (
-                  <div key={item.roleName}>
+                  <div key={module}>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-semibold text-gray-900 dark:text-slate-100">{item.roleName}</span>
-                      <span className="text-sm text-gray-600 dark:text-slate-400 font-medium">
-                        {item.userCount} usuarios
+                      <span className="text-sm font-medium capitalize text-gray-900 dark:text-white">{module}</span>
+                      <span className="text-xs text-gray-500 dark:text-slate-400">
+                        {count} roles
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
+                    <div className="w-full bg-gray-100 dark:bg-slate-800 rounded-full h-1.5">
                       <div
-                        className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all"
+                        className="bg-green-500 dark:bg-green-400 h-1.5 rounded-full transition-all"
                         style={{ width: `${percentage}%` }}
                       />
                     </div>
                   </div>
                 );
               })}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-gray-900 dark:text-white">Módulos Más Usados</CardTitle>
-            <CardDescription className="text-gray-600 dark:text-slate-400 font-medium">
-              Módulos con permisos en más roles
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {Object.entries(analytics.permissionsDistribution)
-                .sort(([, a], [, b]) => b - a)
-                .slice(0, 5)
-                .map(([module, count]) => {
-                  const percentage = analytics.totalRoles > 0 
-                    ? (count / analytics.totalRoles) * 100 
-                    : 0;
-
-                  return (
-                    <div key={module}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold capitalize text-gray-900 dark:text-slate-100">{module}</span>
-                        <span className="text-sm text-gray-600 dark:text-slate-400 font-medium">
-                          {count} roles
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                        <div
-                          className="bg-green-600 dark:bg-green-500 h-2 rounded-full transition-all"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

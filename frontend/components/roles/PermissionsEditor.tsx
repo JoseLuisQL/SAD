@@ -3,40 +3,44 @@
 import { useEffect, useState, useMemo } from 'react';
 import { getModulesByCategory } from '@/lib/permissions';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Search, CheckSquare, Square, Zap } from 'lucide-react';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Search, Eye, Edit3, Zap } from 'lucide-react';
 import PermissionModuleCard from './PermissionModuleCard';
 
 interface PermissionsEditorProps {
-  selectedPermissions: Record<string, any>;
-  onChange: (permissions: Record<string, any>) => void;
+  selectedPermissions: Record<string, Record<string, boolean>>;
+  onChange: (permissions: Record<string, Record<string, boolean>>) => void;
 }
 
 const PERMISSION_TEMPLATES = {
   readonly: {
     label: 'Solo Lectura',
-    description: 'Permisos de visualización únicamente',
-    icon: <Square className="h-4 w-4" />,
+    description: 'Ver y descargar contenido',
+    icon: Eye,
     permissions: ['view', 'download']
   },
   standard: {
-    label: 'Usuario Estándar',
-    description: 'Lectura y edición básica',
-    icon: <CheckSquare className="h-4 w-4" />,
+    label: 'Estandar',
+    description: 'Crear, editar y descargar',
+    icon: Edit3,
     permissions: ['view', 'create', 'update', 'download']
   },
   advanced: {
-    label: 'Usuario Avanzado',
-    description: 'Todos los permisos excepto delete críticos',
-    icon: <Zap className="h-4 w-4" />,
+    label: 'Avanzado',
+    description: 'Todos excepto eliminar',
+    icon: Zap,
     permissions: ['view', 'create', 'update', 'download', 'export', 'generate', 'sign', 'compare', 'restore']
   }
 };
 
 export default function PermissionsEditor({ selectedPermissions, onChange }: PermissionsEditorProps) {
-  const [permissions, setPermissions] = useState<Record<string, any>>(selectedPermissions || {});
+  const [permissions, setPermissions] = useState<Record<string, Record<string, boolean>>>(selectedPermissions || {});
   const [searchQuery, setSearchQuery] = useState('');
   const modulesByCategory = getModulesByCategory();
 
@@ -85,7 +89,7 @@ export default function PermissionsEditor({ selectedPermissions, onChange }: Per
 
   const applyTemplate = (templateKey: keyof typeof PERMISSION_TEMPLATES) => {
     const template = PERMISSION_TEMPLATES[templateKey];
-    const newPermissions: Record<string, any> = {};
+    const newPermissions: Record<string, Record<string, boolean>> = {};
 
     Object.entries(modulesByCategory).forEach(([, modules]) => {
       modules.forEach(module => {
@@ -126,81 +130,108 @@ export default function PermissionsEditor({ selectedPermissions, onChange }: Per
     return filtered;
   }, [modulesByCategory, searchQuery]);
 
-  const totalSelectedPermissions = useMemo(() => {
-    let count = 0;
-    Object.values(permissions).forEach((modulePerms: any) => {
-      if (typeof modulePerms === 'object') {
-        count += Object.values(modulePerms).filter(v => v === true).length;
-      }
-    });
-    return count;
-  }, [permissions]);
+  const getCategoryPermCount = (modules: Array<{ key: string; label: string; actions: readonly string[] }>) => {
+    return modules.reduce((acc, m) => {
+      const perms = permissions[m.key] || {};
+      return acc + Object.values(perms).filter(v => v === true).length;
+    }, 0);
+  };
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="relative flex-1 w-full md:max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500" />
-          <Input
-            placeholder="Buscar módulos..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-slate-400"
-          />
+      {/* Plantillas de permisos */}
+      <div className="space-y-2">
+        <p className="text-xs text-gray-500 dark:text-slate-400">
+          Aplica una plantilla para comenzar rapidamente:
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {Object.entries(PERMISSION_TEMPLATES).map(([key, template]) => {
+            const IconComponent = template.icon;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => applyTemplate(key as keyof typeof PERMISSION_TEMPLATES)}
+                className="p-3 text-left border rounded-lg hover:border-blue-300 hover:bg-blue-50/50 
+                           dark:border-slate-700 dark:hover:border-blue-600 dark:hover:bg-blue-900/20
+                           transition-all group"
+              >
+                <div className="flex items-center gap-2 mb-0.5">
+                  <IconComponent className="h-3.5 w-3.5 text-gray-400 group-hover:text-blue-500 transition-colors" />
+                  <span className="font-medium text-gray-900 dark:text-white text-sm">
+                    {template.label}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-slate-400 pl-5">
+                  {template.description}
+                </p>
+              </button>
+            );
+          })}
         </div>
-        <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800 font-medium whitespace-nowrap">
-          {totalSelectedPermissions} permisos seleccionados
-        </Badge>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
-        {Object.entries(PERMISSION_TEMPLATES).map(([key, template]) => (
-          <Button
-            key={key}
-            variant="outline"
-            size="sm"
-            onClick={() => applyTemplate(key as keyof typeof PERMISSION_TEMPLATES)}
-            className="dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 dark:border-slate-700"
-          >
-            {template.icon}
-            <span className="ml-2">{template.label}</span>
-          </Button>
-        ))}
+      {/* Buscador */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500" />
+        <Input
+          placeholder="Buscar modulos..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10 border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-slate-500"
+          aria-label="Buscar modulos de permisos"
+        />
       </div>
 
-      <Tabs defaultValue={Object.keys(filteredModulesByCategory)[0]} className="w-full">
-        <TabsList className="w-full justify-start overflow-x-auto flex-wrap h-auto bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-1">
-          {Object.keys(filteredModulesByCategory).map((category) => (
-            <TabsTrigger 
+      {/* Acordeón de categorías */}
+      <Accordion 
+        type="multiple" 
+        defaultValue={Object.keys(filteredModulesByCategory)} 
+        className="space-y-2"
+      >
+        {Object.entries(filteredModulesByCategory).map(([category, modules]) => {
+          const categoryPermCount = getCategoryPermCount(modules);
+          
+          return (
+            <AccordionItem 
               key={category} 
               value={category}
-              className="data-[state=active]:bg-white data-[state=active]:dark:bg-slate-900 data-[state=active]:text-gray-900 data-[state=active]:dark:text-white text-gray-600 dark:text-slate-400"
+              className="border rounded-lg dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-900"
             >
-              {category}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+              <AccordionTrigger className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-slate-800/50 hover:no-underline">
+                <div className="flex items-center justify-between w-full pr-2">
+                  <span className="font-medium text-gray-900 dark:text-white text-sm">{category}</span>
+                  {categoryPermCount > 0 && (
+                    <Badge 
+                      variant="secondary" 
+                      className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-0 text-xs"
+                    >
+                      {categoryPermCount}
+                    </Badge>
+                  )}
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-4 pb-4 pt-2 space-y-2">
+                {modules.map((module) => {
+                  const modulePerms = permissions[module.key] || {};
 
-        {Object.entries(filteredModulesByCategory).map(([category, modules]) => (
-          <TabsContent key={category} value={category} className="space-y-4">
-            {modules.map((module) => {
-              const modulePerms = permissions[module.key] || {};
-
-              return (
-                <PermissionModuleCard
-                  key={module.key}
-                  moduleKey={module.key}
-                  moduleLabel={module.label}
-                  actions={module.actions}
-                  selectedPermissions={modulePerms}
-                  onPermissionToggle={(action) => handlePermissionToggle(module.key, action)}
-                  onModuleToggle={() => handleModuleToggle(module.key, module.actions)}
-                />
-              );
-            })}
-          </TabsContent>
-        ))}
-      </Tabs>
+                  return (
+                    <PermissionModuleCard
+                      key={module.key}
+                      moduleKey={module.key}
+                      moduleLabel={module.label}
+                      actions={module.actions}
+                      selectedPermissions={modulePerms}
+                      onPermissionToggle={(action) => handlePermissionToggle(module.key, action)}
+                      onModuleToggle={() => handleModuleToggle(module.key, module.actions)}
+                    />
+                  );
+                })}
+              </AccordionContent>
+            </AccordionItem>
+          );
+        })}
+      </Accordion>
     </div>
   );
 }

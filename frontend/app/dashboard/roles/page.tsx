@@ -13,9 +13,7 @@ import RoleImpactModal from '@/components/roles/RoleImpactModal';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { useRoles } from '@/hooks/useRoles';
 import { Role, CreateRoleData, UpdateRoleData } from '@/types/user.types';
-import { Shield, Plus, BarChart3, GitCompare } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { toast } from 'sonner';
+import { Shield, Plus, BarChart3, GitCompare, Loader2 } from 'lucide-react';
 
 export default function RolesPage() {
   const { roles, loading, fetchRoles, createRole, updateRole, deleteRole, duplicateRole } = useRoles();
@@ -139,56 +137,63 @@ export default function RolesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Shield className="h-8 w-8 text-gray-900 dark:text-white" />
-            Gestión de Roles y Permisos
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white flex items-center gap-3">
+            <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            Roles y Permisos
           </h1>
-          <p className="text-gray-600 dark:text-slate-400 mt-2">
-            Administra los roles del sistema y sus permisos
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1 ml-12">
+            {roles.length} rol{roles.length !== 1 ? 'es' : ''} configurado{roles.length !== 1 ? 's' : ''} en el sistema
           </p>
         </div>
-        <Button onClick={openCreateModal} data-tour="roles-create-button">
-          <Plus className="mr-2 h-4 w-4" />
+        <Button onClick={openCreateModal} data-tour="roles-create-button" aria-label="Crear nuevo rol">
+          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
           Crear Rol
         </Button>
       </div>
 
       <Tabs defaultValue="roles" className="w-full">
-        <TabsList className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
+        <TabsList className="bg-transparent border-none gap-1 p-0">
           <TabsTrigger 
             value="roles" 
-            className="data-[state=active]:bg-white data-[state=active]:dark:bg-slate-900 data-[state=active]:text-gray-900 data-[state=active]:dark:text-white text-gray-600 dark:text-slate-400"
+            className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 
+                       data-[state=active]:dark:bg-blue-900/30 data-[state=active]:dark:text-blue-300
+                       rounded-lg px-4 py-2 text-gray-600 dark:text-slate-400"
           >
             <Shield className="h-4 w-4 mr-2" />
             Roles
           </TabsTrigger>
           <TabsTrigger 
             value="analytics"
-            className="data-[state=active]:bg-white data-[state=active]:dark:bg-slate-900 data-[state=active]:text-gray-900 data-[state=active]:dark:text-white text-gray-600 dark:text-slate-400"
+            className="data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900
+                       dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-white
+                       text-gray-500 dark:text-slate-500 rounded-lg px-3 py-2 text-sm"
           >
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Analytics
+            <BarChart3 className="h-4 w-4 mr-1.5" />
+            Estadisticas
           </TabsTrigger>
           <TabsTrigger 
             value="comparison"
-            className="data-[state=active]:bg-white data-[state=active]:dark:bg-slate-900 data-[state=active]:text-gray-900 data-[state=active]:dark:text-white text-gray-600 dark:text-slate-400"
+            className="data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900
+                       dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-white
+                       text-gray-500 dark:text-slate-500 rounded-lg px-3 py-2 text-sm"
           >
-            <GitCompare className="h-4 w-4 mr-2" />
-            Comparación
+            <GitCompare className="h-4 w-4 mr-1.5" />
+            Comparar
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="roles" className="space-y-4">
+        <TabsContent value="roles" className="space-y-4 mt-4">
           {loading ? (
-            <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
-              <CardContent className="p-12">
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex items-center justify-center py-16" aria-live="polite" aria-busy="true">
+              <div role="status" className="flex flex-col items-center gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600 dark:text-blue-400" />
+                <span className="text-sm text-gray-500 dark:text-slate-400">Cargando roles...</span>
+              </div>
+            </div>
           ) : (
             <div data-tour="roles-stats">
               <div data-tour="roles-table">
@@ -199,17 +204,18 @@ export default function RolesPage() {
                   onViewPermissions={openViewPermissions}
                   onDuplicate={openDuplicateDialog}
                   onViewImpact={openImpactModal}
+                  onCreateRole={openCreateModal}
                 />
               </div>
             </div>
           )}
         </TabsContent>
 
-        <TabsContent value="analytics">
+        <TabsContent value="analytics" className="mt-4">
           <RolesAnalytics />
         </TabsContent>
 
-        <TabsContent value="comparison">
+        <TabsContent value="comparison" className="mt-4">
           <RolesComparison roles={roles} />
         </TabsContent>
       </Tabs>

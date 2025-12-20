@@ -8,11 +8,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRoles } from '@/hooks/useRoles';
-import { Users, Shield, Activity, AlertCircle } from 'lucide-react';
+import { Users, Shield, Activity, AlertTriangle, Loader2, CheckCircle } from 'lucide-react';
 
 interface RoleImpactModalProps {
   isOpen: boolean;
@@ -61,123 +59,124 @@ export default function RoleImpactModal({ isOpen, onClose, roleId }: RoleImpactM
     }
   }, [isOpen, roleId, fetchRoleImpact]);
 
+  const metrics = impact ? [
+    { label: 'Usuarios', value: impact.totalUsers, desc: `${impact.activeUsers} activos`, icon: Users },
+    { label: 'Modulos', value: impact.moduleCount, desc: 'con permisos', icon: Shield },
+    { label: 'Permisos', value: impact.totalPermissions, desc: 'acciones', icon: Activity },
+  ] : [];
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[80vh] dark:bg-slate-900 dark:border-slate-700">
+      <DialogContent className="max-w-2xl max-h-[80vh] dark:bg-slate-900 dark:border-slate-700">
         <DialogHeader>
-          <DialogTitle className="text-gray-900 dark:text-white">Análisis de Impacto del Rol</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+            <div className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <Activity className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            Analisis de Impacto
+          </DialogTitle>
           <DialogDescription className="text-gray-600 dark:text-slate-400">
-            Visualiza el impacto de este rol en el sistema
+            Visualiza el impacto de cambios en este rol
           </DialogDescription>
         </DialogHeader>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
+          <div className="flex items-center justify-center py-16">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600 dark:text-blue-400" />
+              <span className="text-sm text-gray-500 dark:text-slate-400">Analizando impacto...</span>
+            </div>
           </div>
         ) : impact ? (
           <ScrollArea className="max-h-[60vh] pr-4">
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{impact.role.name}</h3>
+            <div className="space-y-4">
+              {/* Nombre del rol */}
+              <div className="pb-3 border-b border-gray-100 dark:border-slate-800">
+                <h3 className="font-medium text-gray-900 dark:text-white">{impact.role.name}</h3>
                 {impact.role.description && (
-                  <p className="text-sm text-gray-600 dark:text-slate-400 font-medium">{impact.role.description}</p>
+                  <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{impact.role.description}</p>
                 )}
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-semibold text-gray-700 dark:text-slate-300">Usuarios Totales</CardTitle>
-                    <Users className="h-4 w-4 text-gray-600 dark:text-slate-400" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{impact.totalUsers}</div>
-                    <p className="text-xs text-gray-600 dark:text-slate-400 font-medium">
-                      {impact.activeUsers} activos
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-semibold text-gray-700 dark:text-slate-300">Módulos</CardTitle>
-                    <Shield className="h-4 w-4 text-gray-600 dark:text-slate-400" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{impact.moduleCount}</div>
-                    <p className="text-xs text-gray-600 dark:text-slate-400 font-medium">
-                      con permisos asignados
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-semibold text-gray-700 dark:text-slate-300">Permisos Totales</CardTitle>
-                    <Activity className="h-4 w-4 text-gray-600 dark:text-slate-400" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{impact.totalPermissions}</div>
-                    <p className="text-xs text-gray-600 dark:text-slate-400 font-medium">
-                      acciones permitidas
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-semibold text-gray-700 dark:text-slate-300">Estado</CardTitle>
-                    <AlertCircle className="h-4 w-4 text-gray-600 dark:text-slate-400" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {impact.totalUsers === 0 ? '✓' : '⚠'}
-                    </div>
-                    <p className="text-xs text-gray-600 dark:text-slate-400 font-medium">
-                      {impact.totalUsers === 0 ? 'Sin usuarios' : 'Con usuarios asignados'}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {impact.affectedUsers.length > 0 && (
-                <Card className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
-                  <CardHeader>
-                    <CardTitle className="text-gray-900 dark:text-white">Usuarios Afectados</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {impact.affectedUsers.map((user) => (
-                        <div
-                          key={user.id}
-                          className="flex items-center justify-between p-3 border border-gray-200 dark:border-slate-700 rounded-lg bg-gray-50 dark:bg-slate-800"
-                        >
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">{user.name}</p>
-                            <p className="text-xs text-gray-600 dark:text-slate-400 font-medium">{user.email}</p>
-                          </div>
-                          <Badge variant={user.isActive ? 'default' : 'secondary'} className={!user.isActive ? 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 font-medium' : ''}>
-                            {user.isActive ? 'Activo' : 'Inactivo'}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {impact.totalUsers > 0 && (
-                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-                  <div className="flex gap-2">
-                    <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="text-sm font-semibold text-amber-900 dark:text-amber-200">Advertencia</h4>
-                      <p className="text-sm text-amber-700 dark:text-amber-300 mt-1 font-medium">
-                        Este rol tiene {impact.totalUsers} usuario(s) asignado(s). 
-                        Cualquier cambio en los permisos afectará a estos usuarios inmediatamente.
+              {/* Metricas */}
+              <div className="grid grid-cols-3 gap-3">
+                {metrics.map((metric) => {
+                  const IconComponent = metric.icon;
+                  return (
+                    <div 
+                      key={metric.label}
+                      className="p-3 bg-gray-50 dark:bg-slate-800/50 rounded-lg text-center"
+                    >
+                      <div className="flex items-center justify-center gap-1.5 text-gray-500 dark:text-slate-400 mb-1">
+                        <IconComponent className="h-3.5 w-3.5" />
+                        <span className="text-xs">{metric.label}</span>
+                      </div>
+                      <p className="text-xl font-semibold text-gray-900 dark:text-white">
+                        {metric.value}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">
+                        {metric.desc}
                       </p>
                     </div>
+                  );
+                })}
+              </div>
+
+              {/* Estado del rol */}
+              <div className={`p-3 rounded-lg flex items-center gap-3 ${
+                impact.totalUsers === 0 
+                  ? 'bg-green-50 dark:bg-green-900/20' 
+                  : 'bg-amber-50 dark:bg-amber-900/20'
+              }`}>
+                {impact.totalUsers === 0 ? (
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                ) : (
+                  <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                )}
+                <div>
+                  <p className={`text-sm font-medium ${
+                    impact.totalUsers === 0 
+                      ? 'text-green-900 dark:text-green-200' 
+                      : 'text-amber-900 dark:text-amber-200'
+                  }`}>
+                    {impact.totalUsers === 0 
+                      ? 'Sin usuarios asignados' 
+                      : `${impact.totalUsers} usuario(s) afectado(s)`
+                    }
+                  </p>
+                  {impact.totalUsers > 0 && (
+                    <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                      Los cambios se aplicaran inmediatamente
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Lista de usuarios */}
+              {impact.affectedUsers.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wide">
+                    Usuarios Afectados
+                  </h4>
+                  <div className="space-y-1">
+                    {impact.affectedUsers.map((user) => (
+                      <div
+                        key={user.id}
+                        className="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-slate-800/50 rounded-lg"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
+                          <p className="text-xs text-gray-500 dark:text-slate-400">{user.email}</p>
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          user.isActive 
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' 
+                            : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400'
+                        }`}>
+                          {user.isActive ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

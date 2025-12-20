@@ -2,8 +2,6 @@
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { ACTION_LABELS } from '@/lib/permissions';
 
 interface PermissionModuleCardProps {
@@ -28,59 +26,58 @@ export default function PermissionModuleCard({
   const selectedCount = actions.filter(action => selectedPermissions[action] === true).length;
 
   return (
-    <Card className="hover:shadow-md transition-shadow bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 flex-1">
-            <Checkbox
-              id={`module-${moduleKey}`}
-              checked={allSelected}
-              onCheckedChange={onModuleToggle}
-              className={someSelected && !allSelected ? 'opacity-50' : ''}
-            />
-            <div className="flex-1">
-              <Label htmlFor={`module-${moduleKey}`} className="text-base font-semibold cursor-pointer text-gray-900 dark:text-white">
-                {moduleLabel}
-              </Label>
-              <CardDescription className="mt-1 text-gray-600 dark:text-slate-400 font-medium">
-                {allSelected 
-                  ? 'Todos los permisos seleccionados' 
-                  : someSelected 
-                  ? `${selectedCount} de ${actions.length} permisos` 
-                  : 'Sin permisos'}
-              </CardDescription>
-            </div>
+    <div className="p-3 border rounded-lg dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600 transition-colors bg-white dark:bg-slate-900">
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id={`module-${moduleKey}`}
+            checked={allSelected}
+            onCheckedChange={onModuleToggle}
+            className={someSelected && !allSelected ? 'opacity-60' : ''}
+            aria-label={`Seleccionar todos los permisos de ${moduleLabel}`}
+          />
+          <div>
+            <Label 
+              htmlFor={`module-${moduleKey}`} 
+              className="font-medium text-gray-900 dark:text-white cursor-pointer text-sm"
+            >
+              {moduleLabel}
+            </Label>
+            {someSelected && (
+              <p className="text-xs text-gray-500 dark:text-slate-400">
+                {selectedCount} de {actions.length}
+              </p>
+            )}
           </div>
-          {someSelected && (
-            <Badge variant={allSelected ? 'default' : 'secondary'} className={allSelected ? '' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800 font-medium'}>
-              {selectedCount}/{actions.length}
-            </Badge>
-          )}
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {actions.map((action) => {
-            const isChecked = selectedPermissions[action] === true;
-
-            return (
-              <div key={action} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`${moduleKey}-${action}`}
-                  checked={isChecked}
-                  onCheckedChange={() => onPermissionToggle(action)}
-                />
-                <Label
-                  htmlFor={`${moduleKey}-${action}`}
-                  className="text-sm font-medium cursor-pointer text-gray-800 dark:text-slate-200"
-                >
-                  {ACTION_LABELS[action] || action}
-                </Label>
-              </div>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+      
+      <div className="flex flex-wrap gap-1.5 pl-6">
+        {actions.map((action) => {
+          const isChecked = selectedPermissions[action] === true;
+          return (
+            <label
+              key={action}
+              className={`
+                inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs cursor-pointer
+                transition-colors border
+                ${isChecked 
+                  ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300' 
+                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-700'}
+              `}
+            >
+              <Checkbox
+                id={`${moduleKey}-${action}`}
+                checked={isChecked}
+                onCheckedChange={() => onPermissionToggle(action)}
+                className="h-3 w-3"
+                aria-label={`${ACTION_LABELS[action] || action} en ${moduleLabel}`}
+              />
+              <span>{ACTION_LABELS[action] || action}</span>
+            </label>
+          );
+        })}
+      </div>
+    </div>
   );
 }

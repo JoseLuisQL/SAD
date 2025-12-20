@@ -12,14 +12,19 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Edit, Trash2, Shield, Copy, MoreVertical, AlertCircle, Search } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Edit, Trash2, Shield, Copy, MoreVertical, AlertCircle, Search, Eye, Plus } from 'lucide-react';
 
 interface RolesTableProps {
   roles: Role[];
@@ -28,6 +33,7 @@ interface RolesTableProps {
   onViewPermissions: (role: Role) => void;
   onDuplicate?: (role: Role) => void;
   onViewImpact?: (role: Role) => void;
+  onCreateRole?: () => void;
 }
 
 export default function RolesTable({ 
@@ -36,7 +42,8 @@ export default function RolesTable({
   onDelete, 
   onViewPermissions,
   onDuplicate,
-  onViewImpact
+  onViewImpact,
+  onCreateRole
 }: RolesTableProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -44,9 +51,9 @@ export default function RolesTable({
     if (!role.permissions || typeof role.permissions !== 'object') return 0;
     
     let count = 0;
-    Object.values(role.permissions).forEach((modulePerms: any) => {
-      if (typeof modulePerms === 'object') {
-        count += Object.values(modulePerms).filter(v => v === true).length;
+    Object.values(role.permissions).forEach((modulePerms: unknown) => {
+      if (typeof modulePerms === 'object' && modulePerms !== null) {
+        count += Object.values(modulePerms as Record<string, boolean>).filter(v => v === true).length;
       }
     });
     return count;
@@ -74,106 +81,155 @@ export default function RolesTable({
           placeholder="Buscar roles..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-slate-400"
+          className="pl-10 border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-slate-500"
+          aria-label="Buscar roles"
         />
       </div>
 
-      <div className="border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-900">
-        <Table className="bg-white dark:bg-slate-900">
+      <div className="border border-gray-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+        <Table className="bg-white dark:bg-slate-900" aria-label="Lista de roles del sistema">
           <TableHeader>
-            <TableRow className="bg-gray-50 dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800">
-              <TableHead className="font-semibold uppercase text-xs text-gray-700 dark:text-slate-300">Nombre</TableHead>
-              <TableHead className="font-semibold uppercase text-xs text-gray-700 dark:text-slate-300">Descripción</TableHead>
-              <TableHead className="font-semibold uppercase text-xs text-gray-700 dark:text-slate-300">Permisos</TableHead>
-              <TableHead className="font-semibold uppercase text-xs text-gray-700 dark:text-slate-300">Módulos</TableHead>
-              <TableHead className="font-semibold uppercase text-xs text-gray-700 dark:text-slate-300 text-right">Acciones</TableHead>
+            <TableRow className="bg-gray-50/80 dark:bg-slate-800/80 hover:bg-gray-50/80 dark:hover:bg-slate-800/80 border-b border-gray-100 dark:border-slate-700">
+              <TableHead className="font-medium text-xs text-gray-500 dark:text-slate-400 py-3">Rol</TableHead>
+              <TableHead className="font-medium text-xs text-gray-500 dark:text-slate-400 py-3">Alcance</TableHead>
+              <TableHead className="font-medium text-xs text-gray-500 dark:text-slate-400 py-3 text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredRoles.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-12 bg-gray-50 dark:bg-slate-800">
-                  <Shield className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-slate-500" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    {searchQuery ? 'No se encontraron roles' : 'No hay roles registrados'}
-                  </h3>
-                  <p className="text-gray-500 dark:text-slate-400">
-                    {searchQuery ? 'Intenta con otros términos de búsqueda' : 'Crea un nuevo rol para comenzar'}
-                  </p>
+                <TableCell colSpan={3} className="text-center py-16 bg-white dark:bg-slate-900">
+                  <div className="max-w-sm mx-auto">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
+                      <Shield className="w-8 h-8 text-gray-400 dark:text-slate-500" />
+                    </div>
+                    <h3 className="text-base font-medium text-gray-900 dark:text-white mb-2">
+                      {searchQuery ? 'Sin resultados' : 'No hay roles'}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">
+                      {searchQuery 
+                        ? 'No se encontraron roles que coincidan con tu busqueda.' 
+                        : 'Los roles definen que acciones pueden realizar los usuarios en cada modulo del sistema.'}
+                    </p>
+                    {!searchQuery && onCreateRole && (
+                      <Button onClick={onCreateRole} size="sm" className="mt-2">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Crear primer rol
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
-              filteredRoles.map((role, index) => (
+              filteredRoles.map((role) => (
                 <TableRow 
                   key={role.id}
-                  className={`${
-                    index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-gray-50/50 dark:bg-slate-800/50'
-                  } hover:bg-blue-50/50 dark:hover:bg-slate-700/50 transition-colors`}
+                  className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors border-b border-gray-100 dark:border-slate-800 last:border-b-0"
+                  tabIndex={0}
+                  role="row"
                 >
-                  <TableCell className="font-semibold text-gray-900 dark:text-slate-100">{role.name}</TableCell>
-                  <TableCell className="max-w-xs truncate text-gray-800 dark:text-slate-200 font-medium">
-                    {role.description || '-'}
+                  <TableCell className="py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
+                        <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900 dark:text-white truncate">{role.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-slate-400 truncate max-w-xs">
+                          {role.description || 'Sin descripcion'}
+                        </p>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800 font-medium">
-                      {getPermissionsCount(role)} permisos
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 font-medium">
-                      {getModulesCount(role)} módulos
-                    </Badge>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {getPermissionsCount(role)}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-slate-400">
+                        permisos en {getModulesCount(role)} modulos
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onViewPermissions(role)}
-                        title="Ver permisos"
-                        className="hover:bg-gray-100 dark:hover:bg-slate-700"
-                      >
-                        <Shield className="h-4 w-4 text-gray-700 dark:text-slate-300" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onEdit(role)}
-                        title="Editar"
-                        className="hover:bg-gray-100 dark:hover:bg-slate-700"
-                      >
-                        <Edit className="h-4 w-4 text-gray-700 dark:text-slate-300" />
-                      </Button>
-                      
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" title="Más acciones" className="hover:bg-gray-100 dark:hover:bg-slate-700">
-                            <MoreVertical className="h-4 w-4 text-gray-700 dark:text-slate-300" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="dark:bg-slate-800 dark:border-slate-700">
-                          {onDuplicate && (
-                            <DropdownMenuItem onClick={() => onDuplicate(role)} className="cursor-pointer dark:hover:bg-slate-700 dark:text-slate-200">
-                              <Copy className="mr-2 h-4 w-4 text-gray-700 dark:text-slate-300" />
-                              Duplicar
+                    <TooltipProvider delayDuration={300}>
+                      <div className="flex justify-end gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => onViewPermissions(role)}
+                              className="h-8 w-8 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                              aria-label="Ver permisos asignados"
+                            >
+                              <Eye className="h-4 w-4 text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p>Ver permisos</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => onEdit(role)}
+                              className="h-8 w-8 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                              aria-label="Editar rol"
+                            >
+                              <Edit className="h-4 w-4 text-gray-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p>Editar</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        
+                        <DropdownMenu>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <DropdownMenuTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8 hover:bg-gray-100 dark:hover:bg-slate-700"
+                                  aria-label="Mas acciones"
+                                >
+                                  <MoreVertical className="h-4 w-4 text-gray-500 dark:text-slate-400" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p>Mas opciones</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <DropdownMenuContent align="end" className="dark:bg-slate-800 dark:border-slate-700 min-w-[140px]">
+                            {onDuplicate && (
+                              <DropdownMenuItem onClick={() => onDuplicate(role)} className="cursor-pointer dark:hover:bg-slate-700 dark:text-slate-200">
+                                <Copy className="mr-2 h-4 w-4 text-gray-500 dark:text-slate-400" />
+                                Duplicar
+                              </DropdownMenuItem>
+                            )}
+                            {onViewImpact && (
+                              <DropdownMenuItem onClick={() => onViewImpact(role)} className="cursor-pointer dark:hover:bg-slate-700 dark:text-slate-200">
+                                <AlertCircle className="mr-2 h-4 w-4 text-gray-500 dark:text-slate-400" />
+                                Ver impacto
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem 
+                              onClick={() => onDelete(role)}
+                              className="text-red-600 dark:text-red-400 cursor-pointer dark:hover:bg-slate-700 focus:text-red-600 dark:focus:text-red-400"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Eliminar
                             </DropdownMenuItem>
-                          )}
-                          {onViewImpact && (
-                            <DropdownMenuItem onClick={() => onViewImpact(role)} className="cursor-pointer dark:hover:bg-slate-700 dark:text-slate-200">
-                              <AlertCircle className="mr-2 h-4 w-4 text-gray-700 dark:text-slate-300" />
-                              Ver Impacto
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem 
-                            onClick={() => onDelete(role)}
-                            className="text-red-600 dark:text-red-400 cursor-pointer dark:hover:bg-slate-700"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4 text-red-600 dark:text-red-400" />
-                            Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TooltipProvider>
                   </TableCell>
                 </TableRow>
               ))

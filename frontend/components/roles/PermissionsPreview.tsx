@@ -9,7 +9,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PERMISSION_MODULES, ACTION_LABELS } from '@/lib/permissions';
 import { Shield, Check } from 'lucide-react';
 
@@ -26,9 +25,9 @@ export default function PermissionsPreview({ isOpen, onClose, role }: Permission
   
   const getTotalPermissionsCount = (): number => {
     let count = 0;
-    Object.values(rolePermissions).forEach((modulePerms: any) => {
-      if (typeof modulePerms === 'object') {
-        count += Object.values(modulePerms).filter(v => v === true).length;
+    Object.values(rolePermissions).forEach((modulePerms: unknown) => {
+      if (typeof modulePerms === 'object' && modulePerms !== null) {
+        count += Object.values(modulePerms as Record<string, boolean>).filter(v => v === true).length;
       }
     });
     return count;
@@ -49,64 +48,89 @@ export default function PermissionsPreview({ isOpen, onClose, role }: Permission
     })
     .filter(module => module.actions.length > 0);
 
+  // Agrupar por categoria
+  const groupedByCategory = groupedPermissions.reduce((acc, module) => {
+    if (!acc[module.category]) acc[module.category] = [];
+    acc[module.category].push(module);
+    return acc;
+  }, {} as Record<string, typeof groupedPermissions>);
+
+  const totalPermissions = getTotalPermissionsCount();
+  const totalModules = groupedPermissions.length;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto dark:bg-slate-900 dark:border-slate-700">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto dark:bg-slate-900 dark:border-slate-700">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
-            <Shield className="h-5 w-5 text-gray-900 dark:text-white" />
-            Permisos de {role.name}
+            <div className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            {role.name}
           </DialogTitle>
           <DialogDescription className="text-gray-600 dark:text-slate-400">
-            {role.description || 'Sin descripción'}
+            {role.description || 'Sin descripcion'}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           {groupedPermissions.length === 0 ? (
             <div className="text-center py-12 bg-gray-50 dark:bg-slate-800 rounded-lg">
-              <Shield className="h-12 w-12 mx-auto mb-4 text-gray-400 dark:text-slate-500 opacity-50" />
-              <p className="text-gray-600 dark:text-slate-400 font-medium">Este rol no tiene permisos asignados</p>
+              <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                <Shield className="h-6 w-6 text-gray-400 dark:text-slate-500" />
+              </div>
+              <p className="text-sm text-gray-600 dark:text-slate-400">Este rol no tiene permisos asignados</p>
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-700 dark:text-slate-300 font-medium">
-                    Total de permisos: <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800 font-medium">{getTotalPermissionsCount()}</Badge>
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-700 dark:text-slate-300 font-medium">
-                    Módulos con acceso: <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800 font-medium">{groupedPermissions.length}</Badge>
-                  </p>
-                </div>
+              {/* Resumen */}
+              <div className="flex items-center gap-4 text-sm">
+                <span className="text-gray-600 dark:text-slate-400">
+                  <span className="font-medium text-gray-900 dark:text-white">{totalPermissions}</span> permisos
+                </span>
+                <span className="text-gray-300 dark:text-slate-600">|</span>
+                <span className="text-gray-600 dark:text-slate-400">
+                  <span className="font-medium text-gray-900 dark:text-white">{totalModules}</span> modulos
+                </span>
               </div>
 
-              <div className="grid gap-4">
-                {groupedPermissions.map(module => (
-                  <Card key={module.moduleKey} className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
-                    <CardHeader>
-                      <CardTitle className="text-lg flex items-center justify-between text-gray-900 dark:text-white">
-                        <span>{module.label}</span>
-                        <Badge variant="outline" className="border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 font-medium">
-                          {module.actions.length}/{module.totalActions} permisos
-                        </Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {module.actions.map(action => (
-                          <div key={action} className="flex items-start gap-2">
-                            <Check className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
-                            <div>
-                              <p className="text-sm font-medium text-gray-800 dark:text-slate-200">{ACTION_LABELS[action] || action}</p>
-                            </div>
+              {/* Permisos agrupados por categoria */}
+              <div className="space-y-4">
+                {Object.entries(groupedByCategory).map(([category, modules]) => (
+                  <div key={category} className="space-y-2">
+                    <h4 className="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wide">
+                      {category}
+                    </h4>
+                    <div className="space-y-2">
+                      {modules.map(module => (
+                        <div 
+                          key={module.moduleKey} 
+                          className="p-3 bg-gray-50 dark:bg-slate-800/50 rounded-lg"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium text-gray-900 dark:text-white text-sm">
+                              {module.label}
+                            </span>
+                            <span className="text-xs text-gray-500 dark:text-slate-400">
+                              {module.actions.length} de {module.totalActions}
+                            </span>
                           </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
+                          <div className="flex flex-wrap gap-1.5">
+                            {module.actions.map(action => (
+                              <span 
+                                key={action}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 dark:bg-green-900/20 
+                                           text-green-700 dark:text-green-400 text-xs rounded-full border border-green-200 dark:border-green-800"
+                              >
+                                <Check className="h-3 w-3" />
+                                {ACTION_LABELS[action] || action}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             </>

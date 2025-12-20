@@ -21,15 +21,15 @@ interface RoleModalProps {
 export default function RoleModal({ isOpen, onClose, role, onSubmit, isLoading }: RoleModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="!max-w-[95vw] sm:!max-w-6xl max-h-[90vh] overflow-y-auto dark:bg-slate-900 dark:border-slate-700">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto dark:bg-slate-900 dark:border-slate-700">
         <DialogHeader>
           <DialogTitle className="text-gray-900 dark:text-white">
-            {role ? 'Editar Rol' : 'Crear Nuevo Rol'}
+            {role ? 'Editar Rol' : 'Crear Rol'}
           </DialogTitle>
           <DialogDescription className="text-gray-600 dark:text-slate-400">
             {role 
-              ? 'Modifica la información y permisos del rol'
-              : 'Crea un nuevo rol y asigna los permisos correspondientes'
+              ? 'Modifica la informacion y permisos del rol'
+              : 'Define un nuevo rol con sus permisos correspondientes'
             }
           </DialogDescription>
         </DialogHeader>
