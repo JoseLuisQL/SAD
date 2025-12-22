@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
-import { usePermissions } from '@/hooks/usePermissions';
+import { usePermissions, type ModuleName } from '@/hooks/usePermissions';
 import { useConfigurationStore } from '@/store/configurationStore';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,10 +14,44 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { User, Settings, LogOut, Menu, HelpCircle, Search, Bell, CheckCheck } from 'lucide-react';
-import { ThemeToggle } from '@/components/shared/ThemeToggle';
+import { 
+  User, 
+  Settings, 
+  LogOut, 
+  Menu, 
+  HelpCircle, 
+  Search, 
+  Bell, 
+  CheckCheck,
+  PenLine,
+  CheckCircle2,
+  RefreshCw,
+  PartyPopper,
+  AlertTriangle,
+  Clock,
+  Sun,
+  Moon,
+  Monitor,
+  Check,
+  ChevronDown,
+  Palette,
+} from 'lucide-react';
+import { useThemeStore } from '@/store/themeStore';
 import { toast } from 'sonner';
 import GlobalSearchCommand from '@/components/search/GlobalSearchCommand';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -29,13 +63,13 @@ interface NavbarProps {
   onMenuClick?: () => void;
 }
 
-const NOTIFICATION_TYPE_ICONS = {
-  SIGNATURE_PENDING: '📝',
-  SIGNATURE_COMPLETED: '✅',
-  FLOW_STARTED: '🔄',
-  FLOW_COMPLETED: '🎉',
-  SIGNATURE_REVERTED: '⚠️',
-  CERTIFICATE_EXPIRING: '⏰'
+const NOTIFICATION_TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  SIGNATURE_PENDING: PenLine,
+  SIGNATURE_COMPLETED: CheckCircle2,
+  FLOW_STARTED: RefreshCw,
+  FLOW_COMPLETED: PartyPopper,
+  SIGNATURE_REVERTED: AlertTriangle,
+  CERTIFICATE_EXPIRING: Clock,
 };
 
 const PRIORITY_COLORS = {
@@ -156,7 +190,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
           </div>
 
           {/* ZONA 3: ÁREA DE USUARIO (Acciones + Perfil) */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <Button
               variant="ghost"
               size="icon"
@@ -165,26 +199,6 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
               aria-label="Buscar documentos"
             >
               <Search className="h-5 w-5 text-slate-700 dark:text-slate-300" />
-            </Button>
-
-            <div className="hidden lg:block text-right min-w-0">
-              <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
-                {user?.firstName} {user?.lastName}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user?.role?.name}</p>
-            </div>
-
-            <ThemeToggle />
-
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setHelpCenterOpen(true)}
-              data-tour="help-center"
-              className="hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200"
-              aria-label="Abrir centro de ayuda"
-            >
-              <HelpCircle className="h-5 w-5 text-slate-700 dark:text-slate-300" />
             </Button>
 
             <div data-tour="notifications">
@@ -197,6 +211,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
               primaryColor={primaryColor}
               router={router}
               hasModule={hasModule}
+              onOpenHelpCenter={() => setHelpCenterOpen(true)}
             />
           </div>
         </div>
@@ -266,7 +281,7 @@ function NotificationsDropdown({ isAuthenticated }: NotificationsDropdownProps) 
   };
 
   const getNotificationIcon = (type: string) => {
-    return NOTIFICATION_TYPE_ICONS[type as keyof typeof NOTIFICATION_TYPE_ICONS] || '📬';
+    return NOTIFICATION_TYPE_ICONS[type as keyof typeof NOTIFICATION_TYPE_ICONS] || Bell;
   };
 
   const getPriorityColor = (priority: string) => {
@@ -325,7 +340,9 @@ function NotificationsDropdown({ isAuthenticated }: NotificationsDropdownProps) 
             </div>
           ) : (
             <div className="divide-y dark:divide-slate-700">
-              {notifications.map((notification) => (
+              {notifications.map((notification) => {
+                const NotificationIcon = getNotificationIcon(notification.type);
+                return (
                 <div
                   key={notification.id}
                   className={`p-3 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-all duration-200 ${
@@ -343,8 +360,8 @@ function NotificationsDropdown({ isAuthenticated }: NotificationsDropdownProps) 
                   aria-label={`${notification.title}. ${notification.message}`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="text-2xl flex-shrink-0" aria-hidden="true">
-                      {getNotificationIcon(notification.type)}
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center" aria-hidden="true">
+                      <NotificationIcon className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                     </div>
                     
                     <div className="flex-1 min-w-0">
@@ -378,7 +395,8 @@ function NotificationsDropdown({ isAuthenticated }: NotificationsDropdownProps) 
                     </div>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           )}
         </div>
@@ -411,119 +429,231 @@ interface UserDropdownProps {
     firstName?: string;
     lastName?: string;
     email?: string;
-    roleName?: string;
+    role?: {
+      name?: string;
+    };
   } | null;
   onLogout: () => void;
   primaryColor: string;
   router: {
     push: (path: string) => void;
   };
-  hasModule: (module: string) => boolean;
+  hasModule: (module: ModuleName) => boolean;
+  onOpenHelpCenter: () => void;
 }
 
-function UserDropdown({ user, onLogout, primaryColor, router, hasModule }: UserDropdownProps) {
+function UserDropdown({ user, onLogout, primaryColor, router, hasModule, onOpenHelpCenter }: UserDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const { theme, setTheme } = useThemeStore();
+  
+  const handleLogoutClick = () => {
+    setIsOpen(false);
+    setLogoutDialogOpen(true);
+  };
+
+  const getThemeIcon = () => {
+    if (theme === 'dark') return Moon;
+    if (theme === 'light') return Sun;
+    return Monitor;
+  };
+
+  const ThemeIcon = getThemeIcon();
   
   return (
+    <>
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <Button 
           variant="ghost" 
-          size="icon" 
-          className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200"
+          className="h-10 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200 gap-2 px-2 pr-3"
           aria-label={`Menú de usuario - ${user?.firstName} ${user?.lastName}`}
           aria-expanded={isOpen}
           aria-haspopup="menu"
         >
           <div 
-            className="w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all duration-200"
             style={{ 
-              backgroundColor: `${primaryColor}15`,
+              backgroundColor: `${primaryColor}10`,
+              borderColor: `${primaryColor}40`,
               color: primaryColor 
             }}
           >
-            <User className="h-4 w-4" />
+            {user?.firstName?.charAt(0)?.toUpperCase()}{user?.lastName?.charAt(0)?.toUpperCase()}
           </div>
+          <div className="hidden sm:flex flex-col items-start">
+            <span className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate max-w-[100px] leading-tight">
+              {user?.firstName}
+            </span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
+              {user?.role?.name}
+            </span>
+          </div>
+          <ChevronDown className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500 hidden sm:block" />
         </Button>
       </DropdownMenuTrigger>
       
-      <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuLabel>
-          <div className="flex flex-col space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+      <DropdownMenuContent align="end" className="w-72 p-0" sideOffset={8}>
+        {/* Header del usuario */}
+        <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-3">
+            <div 
+              className="w-10 h-10 rounded-full flex items-center justify-center text-base font-semibold border-2"
+              style={{ 
+                backgroundColor: `${primaryColor}10`,
+                borderColor: `${primaryColor}40`,
+                color: primaryColor 
+              }}
+            >
+              {user?.firstName?.charAt(0)?.toUpperCase()}{user?.lastName?.charAt(0)?.toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                 {user?.firstName} {user?.lastName}
               </p>
-              <Badge 
-                variant="outline" 
-                className="text-[10px] px-1.5 py-0.5"
-                style={{ 
-                  borderColor: primaryColor,
-                  color: primaryColor 
-                }}
-              >
-                {user?.role?.name}
-              </Badge>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 truncate hidden sm:block">{user?.email}</p>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" aria-label="Sesión activa" />
-              <span className="text-xs text-slate-500 dark:text-slate-400">Sesión activa</span>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user?.email}</p>
             </div>
           </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem 
-          className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200"
-          onClick={() => {
-            setIsOpen(false);
-            router.push('/dashboard/perfil');
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              setIsOpen(false);
-              router.push('/dashboard/perfil');
-            }
-          }}
-        >
-          <User className="mr-2 h-4 w-4 text-slate-600 dark:text-slate-400" />
-          <span className="text-slate-700 dark:text-slate-300">Mi Perfil</span>
-        </DropdownMenuItem>
-        {hasModule('configuration') && (
+          <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-green-500" aria-label="Sesión activa" />
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">Sesión activa</span>
+            </div>
+            <Badge 
+              variant="secondary" 
+              className="text-[10px] px-2 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+            >
+              {user?.role?.name}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Opciones principales */}
+        <div className="p-1.5">
           <DropdownMenuItem 
-            className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200"
+            className="cursor-pointer rounded-md px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             onClick={() => {
               setIsOpen(false);
-              router.push('/dashboard/configuracion');
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                setIsOpen(false);
-                router.push('/dashboard/configuracion');
-              }
+              router.push('/dashboard/perfil');
             }}
           >
-            <Settings className="mr-2 h-4 w-4 text-slate-600 dark:text-slate-400" />
-            <span className="text-slate-700 dark:text-slate-300">Configuración</span>
+            <User className="mr-3 h-4 w-4 text-slate-500 dark:text-slate-400" />
+            <span className="text-sm text-slate-700 dark:text-slate-300">Mi Perfil</span>
           </DropdownMenuItem>
-        )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem 
-          onClick={onLogout} 
-          className="text-red-600 dark:text-red-400 cursor-pointer hover:bg-red-50 dark:hover:bg-red-950 transition-all duration-200 focus:bg-red-50 dark:focus:bg-red-950 focus:text-red-700"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              onLogout();
-            }
-          }}
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Cerrar Sesión</span>
-        </DropdownMenuItem>
+
+          {hasModule('configuration') && (
+            <DropdownMenuItem 
+              className="cursor-pointer rounded-md px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              onClick={() => {
+                setIsOpen(false);
+                router.push('/dashboard/configuracion');
+              }}
+            >
+              <Settings className="mr-3 h-4 w-4 text-slate-500 dark:text-slate-400" />
+              <span className="text-sm text-slate-700 dark:text-slate-300">Configuración</span>
+            </DropdownMenuItem>
+          )}
+
+          <DropdownMenuItem 
+            className="cursor-pointer rounded-md px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            onClick={() => {
+              setIsOpen(false);
+              onOpenHelpCenter();
+            }}
+            data-tour="help-center"
+          >
+            <HelpCircle className="mr-3 h-4 w-4 text-slate-500 dark:text-slate-400" />
+            <span className="text-sm text-slate-700 dark:text-slate-300">Centro de Ayuda</span>
+          </DropdownMenuItem>
+        </div>
+
+        <DropdownMenuSeparator className="my-0" />
+
+        {/* Selector de tema */}
+        <div className="p-1.5">
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className="cursor-pointer rounded-md px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              <Palette className="mr-3 h-4 w-4 text-slate-500 dark:text-slate-400" />
+              <span className="text-sm text-slate-700 dark:text-slate-300 flex-1">Apariencia</span>
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                <ThemeIcon className="h-3.5 w-3.5" />
+                <span className="capitalize">{theme === 'system' ? 'Auto' : theme === 'light' ? 'Claro' : 'Oscuro'}</span>
+              </div>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-44 p-1.5" sideOffset={8}>
+              <DropdownMenuItem 
+                onClick={() => setTheme('light')}
+                className="cursor-pointer rounded-md px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center justify-between"
+              >
+                <div className="flex items-center">
+                  <Sun className="mr-2.5 h-4 w-4 text-amber-500" />
+                  <span className="text-sm">Claro</span>
+                </div>
+                {theme === 'light' && <Check className="h-4 w-4 text-green-600" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => setTheme('dark')}
+                className="cursor-pointer rounded-md px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center justify-between"
+              >
+                <div className="flex items-center">
+                  <Moon className="mr-2.5 h-4 w-4 text-indigo-500" />
+                  <span className="text-sm">Oscuro</span>
+                </div>
+                {theme === 'dark' && <Check className="h-4 w-4 text-green-600" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => setTheme('system')}
+                className="cursor-pointer rounded-md px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center justify-between"
+              >
+                <div className="flex items-center">
+                  <Monitor className="mr-2.5 h-4 w-4 text-slate-500" />
+                  <span className="text-sm">Automático</span>
+                </div>
+                {theme === 'system' && <Check className="h-4 w-4 text-green-600" />}
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        </div>
+
+        <DropdownMenuSeparator className="my-0" />
+
+        {/* Cerrar sesión */}
+        <div className="p-1.5">
+          <DropdownMenuItem 
+            onClick={handleLogoutClick} 
+            className="cursor-pointer rounded-md px-3 py-2.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors focus:bg-red-50 dark:focus:bg-red-950/50"
+          >
+            <LogOut className="mr-3 h-4 w-4" />
+            <span className="text-sm font-medium">Cerrar Sesión</span>
+          </DropdownMenuItem>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
+
+    <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
+      <AlertDialogContent className="max-w-md">
+        <AlertDialogHeader>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+              <LogOut className="h-5 w-5 text-red-600 dark:text-red-400" />
+            </div>
+            <AlertDialogTitle className="text-lg">¿Cerrar sesión?</AlertDialogTitle>
+          </div>
+          <AlertDialogDescription className="text-slate-600 dark:text-slate-400">
+            Se cerrará tu sesión actual. Deberás iniciar sesión nuevamente para acceder al sistema.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="gap-2 sm:gap-2">
+          <AlertDialogCancel className="flex-1 sm:flex-none">Cancelar</AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={onLogout} 
+            className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white focus:ring-red-600"
+          >
+            Cerrar Sesión
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

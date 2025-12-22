@@ -14,7 +14,6 @@ import {
   FileText,
   Search,
   Settings,
-  Shield,
   X,
   Building2,
   Calendar,
@@ -22,8 +21,15 @@ import {
   ChevronLeft,
   ChevronRight,
   Archive,
-  FileSignature,
-  BarChart3,
+  PieChart,
+  Pen,
+  GitBranch,
+  BadgeCheck,
+  TrendingUp,
+  FileCog,
+  ClipboardList,
+  UserCog,
+  HardDrive,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -45,12 +51,14 @@ interface MenuItem {
 
 interface MenuSection {
   label: string;
+  icon: React.ElementType;
   items: MenuItem[];
 }
 
 const menuSections: MenuSection[] = [
   {
-    label: 'Principal',
+    label: 'Inicio',
+    icon: LayoutDashboard,
     items: [
       {
         icon: LayoutDashboard,
@@ -60,18 +68,8 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    label: 'Consultas',
-    items: [
-      {
-        icon: Search,
-        label: 'Búsqueda Avanzada',
-        href: '/dashboard/consultas/busqueda',
-        requiredModule: 'search',
-      },
-    ],
-  },
-  {
-    label: 'Archivo Digital',
+    label: 'Archivo',
+    icon: FolderOpen,
     items: [
       {
         icon: Archive,
@@ -91,31 +89,38 @@ const menuSections: MenuSection[] = [
         href: '/dashboard/archivo/expedientes',
         requiredModule: 'expedientes',
       },
+      {
+        icon: Search,
+        label: 'Búsqueda',
+        href: '/dashboard/consultas/busqueda',
+        requiredModule: 'search',
+      },
     ],
   },
   {
     label: 'Firma Digital',
+    icon: Pen,
     items: [
       {
-        icon: FileSignature,
-        label: 'Firmar Documento',
+        icon: Pen,
+        label: 'Firmar',
         href: '/dashboard/firma/firmar',
         requiredModule: 'signing',
       },
       {
-        icon: FileSignature,
-        label: 'Flujos de Firma',
+        icon: GitBranch,
+        label: 'Flujos',
         href: '/dashboard/firma/flujos',
         requiredModule: 'signatureFlows',
       },
       {
-        icon: Shield,
-        label: 'Validar Firma',
+        icon: BadgeCheck,
+        label: 'Validar',
         href: '/dashboard/firma/validar',
         requiredModule: 'signing',
       },
       {
-        icon: BarChart3,
+        icon: TrendingUp,
         label: 'Analítica',
         href: '/dashboard/firma/analytics',
         requiredModule: 'analytics',
@@ -124,17 +129,19 @@ const menuSections: MenuSection[] = [
   },
   {
     label: 'Reportes',
+    icon: PieChart,
     items: [
       {
-        icon: BarChart3,
-        label: 'Reportes y Analítica',
+        icon: PieChart,
+        label: 'Reportes',
         href: '/dashboard/reportes',
         requiredModule: 'reports',
       },
     ],
   },
   {
-    label: 'Administración',
+    label: 'Sistema',
+    icon: Settings,
     items: [
       {
         icon: Users,
@@ -149,7 +156,7 @@ const menuSections: MenuSection[] = [
         requiredModule: 'offices',
       },
       {
-        icon: FileText,
+        icon: FileCog,
         label: 'Tipos de Documento',
         href: '/dashboard/admin/tipos-documento',
         requiredModule: 'documentTypes',
@@ -161,18 +168,13 @@ const menuSections: MenuSection[] = [
         requiredModule: 'periods',
       },
       {
-        icon: Shield,
+        icon: ClipboardList,
         label: 'Auditoría',
         href: '/dashboard/admin/auditoria',
         requiredModule: 'audit',
       },
-    ],
-  },
-  {
-    label: 'Configuración',
-    items: [
       {
-        icon: Shield,
+        icon: UserCog,
         label: 'Roles y Permisos',
         href: '/dashboard/roles',
         requiredModule: 'roles',
@@ -183,13 +185,8 @@ const menuSections: MenuSection[] = [
         href: '/dashboard/configuracion',
         requiredModule: 'configuration',
       },
-    ],
-  },
-  {
-    label: 'Seguridad',
-    items: [
       {
-        icon: Archive,
+        icon: HardDrive,
         label: 'Copias de Seguridad',
         href: '/dashboard/seguridad/copias',
         requiredModule: 'security',
@@ -203,7 +200,7 @@ export default function Sidebar({ isOpen = true, onClose, isCollapsed = false, o
   const { user } = useAuthStore();
   const { hasModule } = usePermissions();
   const { config } = useConfigurationStore();
-  const [expandedSections, setExpandedSections] = useState<string[]>(['Principal', 'Archivo Digital', 'Firma Digital', 'Administración']);
+  const [expandedSections, setExpandedSections] = useState<string[]>(['Inicio', 'Archivo', 'Firma Digital', 'Sistema']);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -289,9 +286,17 @@ export default function Sidebar({ isOpen = true, onClose, isCollapsed = false, o
                   {!isCollapsed && (
                     <button
                       onClick={() => toggleSection(section.label)}
-                      className="flex items-center justify-between w-full px-3 py-1.5 mb-1.5 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hover:text-slate-700 dark:hover:text-slate-300 transition-all duration-200"
+                      className={cn(
+                        "flex items-center justify-between w-full px-3 py-2 mb-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-all duration-200",
+                        isExpanded
+                          ? "text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800"
+                          : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                      )}
                     >
-                      <span>{section.label}</span>
+                      <div className="flex items-center gap-2">
+                        <section.icon className="h-4 w-4" />
+                        <span>{section.label}</span>
+                      </div>
                       <ChevronDown
                         className={cn(
                           'h-3.5 w-3.5 transition-transform duration-200',
@@ -311,31 +316,34 @@ export default function Sidebar({ isOpen = true, onClose, isCollapsed = false, o
                         const isActive = pathname === item.href;
 
                         const primaryColor = config?.primaryColor || '#2563eb';
-                        const borderStyle = isActive && config?.primaryColor
-                          ? { borderLeft: `3px solid ${primaryColor}` }
-                          : {};
 
                         const menuItemContent = (
                           <Link
                             href={item.href}
                             onClick={onClose}
-                            style={borderStyle}
                             className={cn(
-                              'flex items-center rounded-lg transition-all duration-200 group',
-                              isCollapsed ? 'p-2.5 justify-center mx-auto w-11' : 'px-3 py-2',
+                              'flex items-center rounded-lg transition-all duration-200 group relative',
+                              isCollapsed ? 'p-2.5 justify-center mx-auto w-11' : 'px-3 py-2.5',
                               isActive
-                                ? 'bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 shadow-sm'
-                                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100',
+                                ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 shadow-sm font-semibold'
+                                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100',
                               !isActive && 'hover:shadow-sm'
                             )}
                           >
+                            {isActive && (
+                              <span 
+                                className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full"
+                                style={{ backgroundColor: primaryColor }}
+                                aria-hidden="true"
+                              />
+                            )}
                             <Icon className={cn(
                               'transition-all duration-200',
                               isCollapsed ? 'w-5 h-5' : 'w-4 h-4 mr-3',
                               isActive ? 'scale-110' : 'group-hover:scale-105'
                             )} />
                             {!isCollapsed && (
-                              <span className="text-sm font-medium transition-all overflow-hidden">
+                              <span className="text-sm transition-all overflow-hidden">
                                 {item.label}
                               </span>
                             )}
