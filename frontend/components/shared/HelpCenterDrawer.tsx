@@ -74,7 +74,7 @@ const faqs = [
     questions: [
       {
         question: '¿Qué necesito para firmar digitalmente?',
-        answer: 'Necesitas un certificado digital válido emitido por RENIEC u otra entidad certificadora autorizada en Perú. El sistema se integra con Firma Perú para validar firmas digitales.',
+        answer: 'Necesitas un certificado digital válido emitido por FIRMA PERÚ u otra entidad certificadora autorizada en Perú. El sistema se integra con Firma Perú para validar firmas digitales.',
       },
       {
         question: '¿Cómo funciona el flujo de firma?',

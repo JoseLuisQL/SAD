@@ -558,7 +558,7 @@ export function SignatureWizard() {
       {/* Contenido principal */}
       <div className="flex flex-col h-[calc(100vh-6rem)]">
         {/* Header compacto */}
-        <div className="px-6 lg:px-8 py-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+        <div data-tour="firma-wizard-header" className="px-6 lg:px-8 py-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
@@ -576,7 +576,7 @@ export function SignatureWizard() {
         </div>
 
         {/* Stepper minimalista */}
-        <div className="px-6 lg:px-8 py-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+        <div data-tour="firma-stepper" className="px-6 lg:px-8 py-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
           <div className="max-w-2xl mx-auto">
             {/* Barra de progreso */}
             <Progress value={progressPercentage} className="h-1.5 mb-4" />
@@ -635,7 +635,7 @@ export function SignatureWizard() {
             {currentStep === 1 && (
               <div className="space-y-4">
                 {/* Barra de búsqueda y filtros */}
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div data-tour="firma-search" className="flex flex-col sm:flex-row gap-3">
                   {/* Buscador */}
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -1075,7 +1075,7 @@ export function SignatureWizard() {
                 </Card>
 
                 {/* Requisitos técnicos */}
-                <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20">
+                <Alert data-tour="firma-checklist" className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20">
                   <AlertCircle className="h-4 w-4 text-amber-600" />
                   <AlertDescription className="text-sm text-amber-800 dark:text-amber-300">
                     <p className="font-medium mb-1">Requisitos:</p>

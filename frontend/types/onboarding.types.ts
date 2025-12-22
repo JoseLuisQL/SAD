@@ -16,7 +16,22 @@ export interface CoachMarkTour {
   name: string;
   description: string;
   steps: CoachMarkStep[];
-  module: 'archivadores' | 'documentos' | 'expedientes' | 'busqueda' | 'general' | 'firma' | 'reportes' | 'configuracion';
+  module: 
+    | 'archivadores' 
+    | 'documentos' 
+    | 'expedientes' 
+    | 'busqueda' 
+    | 'general' 
+    | 'firma' 
+    | 'reportes' 
+    | 'configuracion'
+    | 'usuarios'
+    | 'oficinas'
+    | 'tipos-documento'
+    | 'periodos'
+    | 'auditoria'
+    | 'roles'
+    | 'copias-seguridad';
 }
 
 export interface OnboardingState {

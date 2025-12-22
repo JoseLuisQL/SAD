@@ -71,14 +71,6 @@ export const tours: Record<string, CoachMarkTour> = {
         highlightPadding: 12,
       },
       {
-        id: 'busqueda-saved',
-        target: '[data-tour="search-saved"]',
-        title: 'Búsquedas Guardadas',
-        content: 'Guarda tus búsquedas más frecuentes para aplicarlas con un solo clic. Perfecto para consultas recurrentes como "documentos del mes actual", "oficios pendientes de firma" o "expedientes por oficina". Ahorra tiempo y mantén consistencia.',
-        placement: 'bottom',
-        highlightPadding: 10,
-      },
-      {
         id: 'busqueda-search',
         target: '[data-tour="search-input"]',
         title: 'Barra de Búsqueda Principal',
@@ -93,14 +85,6 @@ export const tours: Record<string, CoachMarkTour> = {
         content: 'Haz clic en este botón para abrir filtros avanzados y refinar tu búsqueda: tipo de documento (oficio, resolución, etc.), rango de fechas, oficina emisora, archivador, estado de firma y más. Combínalos para búsquedas ultra precisas.',
         placement: 'left',
         highlightPadding: 8,
-      },
-      {
-        id: 'busqueda-results',
-        target: '[data-tour="search-results-table"]',
-        title: 'Tabla de Resultados',
-        content: 'Todos los documentos que coinciden con tu búsqueda aparecen aquí ordenados por relevancia. Puedes ordenar por fecha, número o remitente haciendo clic en los encabezados de columna. Haz clic en cualquier documento para ver sus detalles completos.',
-        placement: 'top',
-        highlightPadding: 12,
       },
     ],
   },
@@ -245,7 +229,7 @@ export const tours: Record<string, CoachMarkTour> = {
         id: 'firma-wizard-header',
         target: '[data-tour="firma-wizard-header"]',
         title: '¡Bienvenido al Asistente de Firma Digital!',
-        content: 'Este asistente te guiará paso a paso para firmar documentos digitalmente con tu certificado de Firma Perú (emitido por RENIEC). Las firmas digitales tienen plena validez legal en Perú según Ley de Firmas y Certificados Digitales. Es un proceso simple, seguro y rápido.',
+        content: 'Este asistente te guiará paso a paso para firmar documentos digitalmente con tu certificado de Firma Perú (emitido por FIRMA PERÚ). Las firmas digitales tienen plena validez legal en Perú según Ley de Firmas y Certificados Digitales. Es un proceso simple, seguro y rápido.',
         placement: 'bottom',
         highlightPadding: 12,
       },
@@ -261,17 +245,9 @@ export const tours: Record<string, CoachMarkTour> = {
         id: 'firma-search',
         target: '[data-tour="firma-search"]',
         title: 'Buscar y Seleccionar Documento',
-        content: 'Busca el documento que deseas firmar por nombre de archivo, número de documento o remitente. Los resultados aparecen instantáneamente. Haz clic en cualquier documento de la lista para seleccionarlo y continuar al siguiente paso.',
+        content: 'Busca el documento que deseas firmar por nombre de archivo, número de documento o remitente. Los resultados aparecen instantáneamente. Haz clic en cualquier documento de la lista para seleccionarlo y continuar al siguiente paso. Al llegar al paso final, verifica los requisitos técnicos: Token USB conectado, drivers instalados y certificado vigente.',
         placement: 'bottom',
         highlightPadding: 8,
-      },
-      {
-        id: 'firma-checklist',
-        target: '[data-tour="firma-checklist"]',
-        title: 'Checklist de Requisitos Técnicos',
-        content: 'Antes de firmar, verifica que cumples todos los requisitos técnicos: ✓ Token USB de Firma Perú conectado al puerto USB, ✓ Drivers de token instalados correctamente, ✓ Certificado digital vigente (no vencido), ✓ Extensión EClickOnce launcher instalada en Chrome. Si falta algo, el sistema te alertará.',
-        placement: 'left',
-        highlightPadding: 10,
       },
     ],
   },
@@ -328,24 +304,16 @@ export const tours: Record<string, CoachMarkTour> = {
   'firma-validar-tour': {
     id: 'firma-validar-tour',
     name: 'Validación de Firmas Digitales',
-    description: 'Verifica la autenticidad, validez e integridad de firmas digitales en documentos. Validación interna (rápida) o externa oficial de Firma Perú.',
+    description: 'Verifica la autenticidad, validez e integridad de firmas digitales en documentos. Validación externa oficial de Firma Perú.',
     module: 'firma',
     steps: [
       {
         id: 'firma-validar-header',
         target: '[data-tour="firma-validar-header"]',
         title: '¡Bienvenido a la Validación de Firmas!',
-        content: 'Aquí puedes verificar la autenticidad, validez legal e integridad de firmas digitales en documentos. La validación confirma: ✓ La firma es auténtica (certificado válido), ✓ El documento no ha sido modificado después de la firma, ✓ El certificado no está revocado. Selecciona un documento desde la lista o desde el módulo de archivo para validar todas sus firmas.',
+        content: 'Aquí puedes verificar la autenticidad, validez legal e integridad de firmas digitales en documentos. La validación confirma: ✓ La firma es auténtica (certificado válido), ✓ El documento no ha sido modificado después de la firma, ✓ El certificado no está revocado. Utiliza el validador externo de Firma Perú para obtener una validación oficial completa.',
         placement: 'bottom',
         highlightPadding: 12,
-      },
-      {
-        id: 'firma-validar-tabs',
-        target: '[data-tour="firma-validar-tabs"]',
-        title: 'Tipos de Validación Disponibles',
-        content: 'Una vez seleccionado un documento, elige el tipo de validación: 1) INTERNA: Rápida, verifica con registros del sistema (segundos), 2) EXTERNA: Validación oficial contra servidores de Firma Perú/RENIEC (más lenta pero con validez legal plena), 3) HISTORIAL: Revisa todas las validaciones previas realizadas al documento con fechas y resultados.',
-        placement: 'bottom',
-        highlightPadding: 10,
       },
     ],
   },
@@ -442,7 +410,7 @@ export const tours: Record<string, CoachMarkTour> = {
     id: 'usuarios-tour',
     name: 'Gestión de Usuarios',
     description: 'Crea, edita y administra usuarios del sistema. Asigna roles, permisos y oficinas. Control completo de accesos y credenciales.',
-    module: 'usuarios',
+    module: 'usuarios' as const,
     steps: [
       {
         id: 'usuarios-welcome',
@@ -483,7 +451,7 @@ export const tours: Record<string, CoachMarkTour> = {
     id: 'oficinas-tour',
     name: 'Gestión de Oficinas',
     description: 'Administra las oficinas y áreas de tu organización. Organiza la estructura administrativa y asocia documentos a oficinas emisoras o receptoras.',
-    module: 'oficinas',
+    module: 'oficinas' as const,
     steps: [
       {
         id: 'oficinas-welcome',
@@ -524,7 +492,7 @@ export const tours: Record<string, CoachMarkTour> = {
     id: 'tipos-documento-tour',
     name: 'Gestión de Tipos de Documento',
     description: 'Define y administra las tipologías de documentos de tu organización: oficios, memorandos, resoluciones, actas, etc. Estandariza la clasificación.',
-    module: 'tipos-documento',
+    module: 'tipos-documento' as const,
     steps: [
       {
         id: 'tipos-doc-welcome',
@@ -565,7 +533,7 @@ export const tours: Record<string, CoachMarkTour> = {
     id: 'periodos-tour',
     name: 'Gestión de Períodos',
     description: 'Define períodos temporales para organizar archivadores y documentos: años fiscales, gestiones administrativas o rangos personalizados.',
-    module: 'periodos',
+    module: 'periodos' as const,
     steps: [
       {
         id: 'periodos-welcome',
@@ -584,14 +552,6 @@ export const tours: Record<string, CoachMarkTour> = {
         highlightPadding: 12,
       },
       {
-        id: 'periodos-search',
-        target: '[data-tour="periodos-search"]',
-        title: 'Buscar Períodos',
-        content: 'Busca períodos por nombre o año. La búsqueda te permite encontrar rápidamente el período que necesitas editar o consultar, especialmente útil cuando tienes muchos períodos históricos.',
-        placement: 'bottom',
-        highlightPadding: 10,
-      },
-      {
         id: 'periodos-table',
         target: '[data-tour="periodos-table"]',
         title: 'Tabla de Períodos',
@@ -606,7 +566,7 @@ export const tours: Record<string, CoachMarkTour> = {
     id: 'auditoria-tour',
     name: 'Auditoría y Trazabilidad',
     description: 'Consulta el registro completo de todas las acciones realizadas en el sistema. Trazabilidad total para seguridad, cumplimiento y resolución de incidentes.',
-    module: 'auditoria',
+    module: 'auditoria' as const,
     steps: [
       {
         id: 'auditoria-header',
@@ -615,14 +575,6 @@ export const tours: Record<string, CoachMarkTour> = {
         content: 'El sistema mantiene un registro completo y permanente de TODAS las acciones realizadas: quién accedió, qué documento consultó, qué modificó, qué descargó, qué firmó, cuándo y desde dónde. Este módulo es fundamental para seguridad, cumplimiento normativo y resolución de incidentes.',
         placement: 'bottom',
         highlightPadding: 12,
-      },
-      {
-        id: 'auditoria-filters',
-        target: '[data-tour="auditoria-filters"]',
-        title: 'Filtros Avanzados de Auditoría',
-        content: 'Filtra registros de auditoría por múltiples criterios: usuario específico (quién realizó la acción), módulo del sistema (documento, firma, expediente, etc.), tipo de acción (crear, modificar, eliminar, descargar), rango de fechas y más. Combina filtros para investigaciones específicas.',
-        placement: 'bottom',
-        highlightPadding: 10,
       },
       {
         id: 'auditoria-table',
@@ -650,7 +602,7 @@ export const tours: Record<string, CoachMarkTour> = {
     id: 'roles-tour',
     name: 'Gestión de Roles y Permisos',
     description: 'Define roles personalizados con permisos granulares. Control de acceso basado en roles (RBAC) para seguridad y organización.',
-    module: 'roles',
+    module: 'roles' as const,
     steps: [
       {
         id: 'roles-welcome',
@@ -674,14 +626,6 @@ export const tours: Record<string, CoachMarkTour> = {
         title: 'Tabla de Roles',
         content: 'Visualiza todos los roles con información: nombre, descripción, cantidad de usuarios asignados, permisos otorgados (módulos accesibles) y estado. Haz clic en cualquier rol para editar sus permisos de forma granular: marcar o desmarcar acceso a cada módulo del sistema.',
         placement: 'top',
-        highlightPadding: 12,
-      },
-      {
-        id: 'roles-permissions',
-        target: '[data-tour="roles-permissions"]',
-        title: 'Configuración de Permisos',
-        content: 'Al editar un rol, marca o desmarca los módulos a los que tendrá acceso: Dashboard, Archivadores, Documentos, Expedientes, Búsqueda, Firma Digital, Reportes, Administración, etc. Los usuarios con este rol solo podrán acceder a los módulos que marques.',
-        placement: 'right',
         highlightPadding: 12,
       },
     ],
@@ -735,7 +679,7 @@ export const tours: Record<string, CoachMarkTour> = {
     id: 'copias-seguridad-tour',
     name: 'Copias de Seguridad',
     description: 'Gestiona copias de seguridad (backups) de la base de datos. Crea respaldos manuales, programa automáticos y restaura cuando sea necesario.',
-    module: 'copias-seguridad',
+    module: 'copias-seguridad' as const,
     steps: [
       {
         id: 'copias-header',
@@ -768,14 +712,6 @@ export const tours: Record<string, CoachMarkTour> = {
         content: 'Visualiza todas las copias de seguridad disponibles: fecha y hora de creación, tipo (manual/automática), tamaño del archivo, estado (exitosa/fallida) y acciones. Puedes descargar copias para almacenamiento externo, restaurar el sistema a un estado anterior o eliminar copias antiguas.',
         placement: 'top',
         highlightPadding: 12,
-      },
-      {
-        id: 'copias-restore',
-        target: '[data-tour="copias-restore"]',
-        title: 'Restaurar desde Copia de Seguridad',
-        content: 'Para restaurar el sistema a un estado anterior, selecciona una copia de la lista y confirma la restauración. ⚠️ ADVERTENCIA: Este proceso reemplazará TODOS los datos actuales con los datos de la copia seleccionada. Todos los cambios posteriores a esa fecha se perderán. Úsalo solo en emergencias.',
-        placement: 'left',
-        highlightPadding: 10,
       },
     ],
   },
