@@ -1,58 +1,63 @@
 import { Router } from 'express';
 import * as rolesController from '../controllers/roles.controller';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { authenticate } from '../middlewares/auth.middleware';
+import { requirePermission } from '../middlewares/permissions.middleware';
 
 const router = Router();
 
 router.get(
   '/',
   authenticate,
+  requirePermission('roles', 'view'),
   rolesController.getAll
 );
 
 router.get(
   '/analytics/summary',
   authenticate,
+  requirePermission('roles', 'view'),
   rolesController.getAnalytics
 );
 
 router.get(
   '/:id',
   authenticate,
+  requirePermission('roles', 'view'),
   rolesController.getById
 );
 
 router.get(
   '/:id/impact',
   authenticate,
+  requirePermission('roles', 'view'),
   rolesController.getImpact
 );
 
 router.post(
   '/',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('roles', 'create'),
   rolesController.create
 );
 
 router.put(
   '/:id',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('roles', 'update'),
   rolesController.update
 );
 
 router.delete(
   '/:id',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('roles', 'delete'),
   rolesController.deleteRole
 );
 
 router.post(
   '/:id/duplicate',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('roles', 'create'),
   rolesController.duplicate
 );
 

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as usersController from '../controllers/users.controller';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { authenticate } from '../middlewares/auth.middleware';
+import { requirePermission } from '../middlewares/permissions.middleware';
 
 const router = Router();
 
@@ -31,28 +32,28 @@ router.get(
 router.get(
   '/stats',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('users', 'view'),
   usersController.getStats
 );
 
 router.get(
   '/export/csv',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('users', 'view'),
   usersController.exportCSV
 );
 
 router.get(
   '/export/excel',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('users', 'view'),
   usersController.exportExcel
 );
 
 router.get(
   '/',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('users', 'view'),
   usersController.getAll
 );
 
@@ -77,21 +78,21 @@ router.get(
 router.post(
   '/',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('users', 'create'),
   usersController.create
 );
 
 router.put(
   '/:id',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('users', 'update'),
   usersController.update
 );
 
 router.delete(
   '/:id',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('users', 'delete'),
   usersController.deleteUser
 );
 

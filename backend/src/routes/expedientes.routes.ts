@@ -1,77 +1,84 @@
 import { Router } from 'express';
 import * as expedientesController from '../controllers/expedientes.controller';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { authenticate } from '../middlewares/auth.middleware';
+import { requirePermission } from '../middlewares/permissions.middleware';
 
 const router = Router();
 
 router.get(
   '/',
   authenticate,
+  requirePermission('expedientes', 'view'),
   expedientesController.getAll
 );
 
 router.get(
   '/stats',
   authenticate,
+  requirePermission('expedientes', 'view'),
   expedientesController.getStats
 );
 
 router.get(
   '/search',
   authenticate,
+  requirePermission('expedientes', 'view'),
   expedientesController.search
 );
 
 router.get(
   '/:id',
   authenticate,
+  requirePermission('expedientes', 'view'),
   expedientesController.getById
 );
 
 router.get(
   '/:id/analytics',
   authenticate,
+  requirePermission('analytics', 'view'),
   expedientesController.getAnalytics
 );
 
 router.get(
   '/:id/activity',
   authenticate,
+  requirePermission('expedientes', 'view'),
   expedientesController.getActivity
 );
 
 router.post(
   '/',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('expedientes', 'create'),
   expedientesController.create
 );
 
 router.put(
   '/:id',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('expedientes', 'update'),
   expedientesController.update
 );
 
 router.delete(
   '/:id',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('expedientes', 'delete'),
   expedientesController.deleteExpediente
 );
 
 router.post(
   '/:id/documents',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('expedientes', 'update'),
   expedientesController.addDocuments
 );
 
 router.delete(
   '/:id/documents',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('expedientes', 'update'),
   expedientesController.removeDocuments
 );
 

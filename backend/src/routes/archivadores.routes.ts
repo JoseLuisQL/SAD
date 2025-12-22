@@ -1,12 +1,14 @@
 import { Router } from 'express';
 import * as archivadoresController from '../controllers/archivadores.controller';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { authenticate } from '../middlewares/auth.middleware';
+import { requirePermission } from '../middlewares/permissions.middleware';
 
 const router = Router();
 
 router.get(
   '/',
   authenticate,
+  requirePermission('archivadores', 'view'),
   archivadoresController.getAll
 );
 
@@ -14,12 +16,14 @@ router.get(
 router.get(
   '/search',
   authenticate,
+  requirePermission('archivadores', 'view'),
   archivadoresController.search
 );
 
 router.get(
   '/stats',
   authenticate,
+  requirePermission('archivadores', 'view'),
   archivadoresController.getGeneralStats
 );
 
@@ -27,39 +31,42 @@ router.get(
 router.get(
   '/:id',
   authenticate,
+  requirePermission('archivadores', 'view'),
   archivadoresController.getById
 );
 
 router.get(
   '/:id/stats',
   authenticate,
+  requirePermission('archivadores', 'view'),
   archivadoresController.getStats
 );
 
 router.get(
   '/:id/analytics',
   authenticate,
+  requirePermission('analytics', 'view'),
   archivadoresController.getAnalytics
 );
 
 router.post(
   '/',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('archivadores', 'create'),
   archivadoresController.create
 );
 
 router.put(
   '/:id',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('archivadores', 'update'),
   archivadoresController.update
 );
 
 router.delete(
   '/:id',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('archivadores', 'delete'),
   archivadoresController.deleteArchivador
 );
 

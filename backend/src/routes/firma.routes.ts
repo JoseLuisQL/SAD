@@ -2,7 +2,8 @@ import { Router } from 'express';
 import * as firmaController from '../controllers/firma.controller';
 import * as signatureFlowController from '../controllers/signature-flow.controller';
 import * as analyticsController from '../controllers/signature-analytics.controller';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { authenticate } from '../middlewares/auth.middleware';
+import { requirePermission, requireAnyPermission } from '../middlewares/permissions.middleware';
 import { uploadSingle, uploadMultiple } from '../config/multer.config';
 import { handleUploadError, validateFile, cleanupOnError } from '../middlewares/upload.middleware';
 import { validate } from '../middlewares/validation.middleware';
@@ -25,7 +26,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 router.get(
   '/config',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('signing', 'view'),
   firmaController.getConfig
 );
 
@@ -33,7 +34,7 @@ router.get(
 router.post(
   '/params-request',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('signing', 'sign'),
   firmaController.generateOneTimeTokenForSigning
 );
 
@@ -62,14 +63,14 @@ router.post(
 router.get(
   '/info',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('signing', 'view'),
   firmaController.getInfo
 );
 
 router.post(
   '/test-validation',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('signing', 'view'),
   uploadSingle,
   handleUploadError,
   validateFile,
@@ -80,14 +81,14 @@ router.post(
 router.post(
   '/clean-temp',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('configuration', 'update'),
   firmaController.cleanTemporaryFiles
 );
 
 router.post(
   '/sign-document/:id',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('signing', 'sign'),
   uploadSingle,
   handleUploadError,
   validateFile,
@@ -99,7 +100,7 @@ router.post(
 router.post(
   '/sign-documents-batch',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('signing', 'sign'),
   uploadMultiple,
   handleUploadError,
   validateFile,
@@ -113,7 +114,7 @@ router.post(
 router.post(
   '/flows',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('signatureFlows', 'create'),
   validate(createSignatureFlowSchema),
   signatureFlowController.create
 );
@@ -121,24 +122,31 @@ router.post(
 router.get(
   '/flows',
   authenticate,
+  requirePermission('signatureFlows', 'view'),
   signatureFlowController.getAll
 );
 
 router.get(
   '/flows/pending',
   authenticate,
+  requireAnyPermission([
+    { module: 'signatureFlows', permission: 'view' },
+    { module: 'signing', permission: 'sign' }
+  ]),
   signatureFlowController.getPending
 );
 
 router.get(
   '/flows/:id',
   authenticate,
+  requirePermission('signatureFlows', 'view'),
   signatureFlowController.getById
 );
 
 router.post(
   '/flows/:id/advance',
   authenticate,
+  requirePermission('signing', 'sign'),
   uploadSingle,
   handleUploadError,
   validateFile,
@@ -150,6 +158,7 @@ router.post(
 router.post(
   '/flows/:id/cancel',
   authenticate,
+  requirePermission('signatureFlows', 'delete'),
   signatureFlowController.cancel
 );
 
@@ -158,14 +167,14 @@ router.post(
 router.get(
   '/verify/:id',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('signing', 'view'),
   firmaController.verifyDocument
 );
 
 router.post(
   '/verify-upload',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('signing', 'view'),
   uploadSingle,
   handleUploadError,
   validateFile,
@@ -176,7 +185,7 @@ router.post(
 router.get(
   '/validation-report/:documentId',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('signing', 'view'),
   firmaController.getValidationReport
 );
 
@@ -185,7 +194,7 @@ router.get(
 router.post(
   '/revert/:documentId',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('signatureFlows', 'delete'),
   updateSignatureStatusAfterRevert,
   firmaController.revertSignatures
 );
@@ -193,7 +202,7 @@ router.post(
 router.post(
   '/revert/:documentId/version/:versionId',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('signatureFlows', 'delete'),
   updateSignatureStatusAfterRevert,
   firmaController.revertToVersion
 );
@@ -201,7 +210,7 @@ router.post(
 router.get(
   '/revert/:documentId/history',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('signatureFlows', 'view'),
   firmaController.getReversionHistory
 );
 
@@ -234,7 +243,7 @@ router.get(
 router.get(
   '/statistics',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('analytics', 'view'),
   firmaController.getSignatureStatistics
 );
 
@@ -243,7 +252,7 @@ router.get(
 router.get(
   '/precheck/:documentId',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('signing', 'sign'),
   firmaController.precheckDocument
 );
 
@@ -252,49 +261,49 @@ router.get(
 router.get(
   '/analytics/metrics',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('analytics', 'view'),
   analyticsController.getMetrics
 );
 
 router.get(
   '/analytics/by-period',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('analytics', 'view'),
   analyticsController.getByPeriod
 );
 
 router.get(
   '/analytics/by-user',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('analytics', 'view'),
   analyticsController.getByUser
 );
 
 router.get(
   '/analytics/flows',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('analytics', 'view'),
   analyticsController.getFlowStats
 );
 
 router.get(
   '/analytics/document-types',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('analytics', 'view'),
   analyticsController.getDocumentTypes
 );
 
 router.get(
   '/analytics/reversions',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('analytics', 'view'),
   analyticsController.getReversionStats
 );
 
 router.get(
   '/analytics/export',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('analytics', 'export'),
   analyticsController.exportReport
 );
 

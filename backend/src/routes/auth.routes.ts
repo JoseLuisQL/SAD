@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import * as authController from '../controllers/auth.controller';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { authenticate } from '../middlewares/auth.middleware';
+import { requirePermission } from '../middlewares/permissions.middleware';
 import { 
   validateRegister, 
   validateLogin, 
@@ -36,7 +37,7 @@ const router = Router();
 router.post(
   '/register',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('users', 'create'),
   validateRegister,
   authController.register
 );

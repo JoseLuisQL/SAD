@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as configurationController from '../controllers/configuration.controller';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { authenticate } from '../middlewares/auth.middleware';
+import { requirePermission } from '../middlewares/permissions.middleware';
 import { uploadLogo, uploadStamp, uploadFavicon, uploadLoginBg } from '../config/branding-multer.config';
 
 const router = Router();
@@ -11,14 +12,14 @@ router.get('/', configurationController.getConfig);
 router.put(
   '/',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('configuration', 'update'),
   configurationController.updateConfig
 );
 
 router.post(
   '/logo',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('configuration', 'update'),
   uploadLogo,
   configurationController.uploadLogo
 );
@@ -26,7 +27,7 @@ router.post(
 router.post(
   '/favicon',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('configuration', 'update'),
   uploadFavicon,
   configurationController.uploadFavicon
 );
@@ -34,7 +35,7 @@ router.post(
 router.post(
   '/stamp',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('configuration', 'update'),
   uploadStamp,
   configurationController.uploadStamp
 );
@@ -42,7 +43,7 @@ router.post(
 router.post(
   '/login-background/:slot',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('configuration', 'update'),
   uploadLoginBg,
   configurationController.uploadLoginBackground
 );
@@ -50,35 +51,35 @@ router.post(
 router.delete(
   '/logo',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('configuration', 'update'),
   configurationController.removeLogo
 );
 
 router.delete(
   '/favicon',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('configuration', 'update'),
   configurationController.removeFavicon
 );
 
 router.delete(
   '/stamp',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('configuration', 'update'),
   configurationController.removeStamp
 );
 
 router.delete(
   '/login-background/:slot',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('configuration', 'update'),
   configurationController.removeLoginBackground
 );
 
 router.put(
   '/external-urls',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('configuration', 'update'),
   configurationController.updateExternalUrls
 );
 

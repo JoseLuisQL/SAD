@@ -1,48 +1,49 @@
 import { Router } from 'express';
 import * as reportsController from '../controllers/reports.controller';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { authenticate } from '../middlewares/auth.middleware';
+import { requirePermission } from '../middlewares/permissions.middleware';
 
 const router = Router();
 
 router.get(
   '/documents',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('reports', 'view'),
   reportsController.getDocumentReport
 );
 
 router.get(
   '/activity',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('reports', 'view'),
   reportsController.getUserActivityReport
 );
 
 router.get(
   '/signatures',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('reports', 'view'),
   reportsController.getSignatureReport
 );
 
 router.get(
   '/documents/export',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('reports', 'export'),
   reportsController.exportDocumentReport
 );
 
 router.get(
   '/activity/export',
   authenticate,
-  authorize('Administrador'),
+  requirePermission('reports', 'export'),
   reportsController.exportUserActivityReport
 );
 
 router.get(
   '/signatures/export',
   authenticate,
-  authorize('Administrador', 'Operador'),
+  requirePermission('reports', 'export'),
   reportsController.exportSignatureReport
 );
 
