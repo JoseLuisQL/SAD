@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import LoginForm from '@/components/forms/LoginForm';
 import Image from 'next/image';
 import { useConfigurationStore } from '@/store/configurationStore';
@@ -14,12 +14,12 @@ export default function LoginPage() {
   }, [fetchConfig]);
 
   return (
-    <Card className="border border-gray-200 dark:border-slate-700 shadow-xl bg-white dark:bg-slate-900 w-full">
-      <CardHeader className="space-y-4 pb-6 px-8 pt-8">
-        {/* Logo oficial */}
+    <Card className="border-0 shadow-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl w-full rounded-2xl overflow-hidden">
+      <CardHeader className="space-y-3 pb-4 px-8 pt-8">
+        {/* Logo con animación sutil */}
         <div className="flex justify-center">
           {config?.logoUrl ? (
-            <div className="relative w-20 h-20">
+            <div className="relative w-16 h-16 transition-transform hover:scale-105">
               <Image
                 src={config.logoUrl}
                 alt={`Logo ${config.companyName || 'Empresa'}`}
@@ -29,40 +29,26 @@ export default function LoginPage() {
               />
             </div>
           ) : (
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-800 dark:from-blue-500 dark:to-blue-700 rounded-2xl flex items-center justify-center shadow-lg">
-              <span className="text-white text-4xl font-bold">
-                {config?.companyName?.charAt(0) || 'D'}
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center shadow-lg transition-transform hover:scale-105">
+              <span className="text-white text-3xl font-bold">
+                {config?.companyName?.charAt(0) || 'S'}
               </span>
             </div>
           )}
         </div>
 
-        {/* Encabezado */}
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white text-center">
-            Iniciar Sesión
+        {/* Encabezado simplificado */}
+        <div className="text-center space-y-1">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+            Bienvenido
           </h1>
-          <CardTitle className="text-base font-semibold text-gray-800 dark:text-slate-200 text-center">
-            {config?.companyName || 'Sistema Integrado de Archivos Digitales'}
-          </CardTitle>
-          {config?.companyTagline && (
-            <CardDescription className="text-sm text-gray-600 dark:text-slate-400 text-center">
-              {config.companyTagline}
-            </CardDescription>
-          )}
-        </div>
-
-        {/* Texto de bienvenida */}
-        <div className="pt-1">
-          <p className="text-sm text-gray-600 dark:text-slate-400 leading-relaxed text-center font-medium">
-            Acceda de forma segura al sistema de gestión documental. 
-            Toda la información es confidencial y está protegida bajo 
-            estándares de seguridad institucionales.
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Ingrese sus credenciales para continuar
           </p>
         </div>
       </CardHeader>
 
-      <CardContent className="pt-0 px-8 pb-8">
+      <CardContent className="pt-2 px-8 pb-8">
         <LoginForm />
       </CardContent>
     </Card>

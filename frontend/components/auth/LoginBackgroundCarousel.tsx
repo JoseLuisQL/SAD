@@ -28,7 +28,7 @@ export function LoginBackgroundCarousel() {
   }, [hasBackgrounds, backgrounds.length]);
 
   if (!hasBackgrounds) {
-    // Default gradient background
+    // Default gradient background - optimizado
     return (
       <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800" />
     );
@@ -36,7 +36,7 @@ export function LoginBackgroundCarousel() {
 
   return (
     <div className="absolute inset-0 overflow-hidden">
-      {/* Background Images with blur */}
+      {/* Background Images with reduced blur for better performance */}
       {backgrounds.map((bg, index) => (
         <div
           key={bg}
@@ -51,22 +51,22 @@ export function LoginBackgroundCarousel() {
             alt={`Background ${index + 1}`}
             fill
             priority={index === 0}
-            quality={95}
-            className="object-cover blur-sm scale-105"
+            quality={90}
+            className="object-cover blur-[2px] scale-[1.02]"
             unoptimized
           />
         </div>
       ))}
 
-      {/* Darker overlay for better contrast */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/35 to-black/45" />
+      {/* Optimized overlay for better legibility */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-900/60 via-slate-900/50 to-indigo-900/60" />
       
-      {/* Enhanced vignette effect */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.3)_100%)]" />
+      {/* Subtle vignette effect */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.25)_100%)]" />
 
-      {/* Carousel indicators */}
+      {/* Carousel indicators - hidden on mobile */}
       {backgrounds.length > 1 && (
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 hidden md:flex gap-1.5 z-10">
           {backgrounds.map((_, index) => (
             <button
               key={index}
@@ -77,12 +77,12 @@ export function LoginBackgroundCarousel() {
                   setIsTransitioning(false);
                 }, 400);
               }}
-              className={`h-2 rounded-full transition-all duration-300 ${
+              className={`h-1.5 rounded-full transition-all duration-300 ${
                 index === currentIndex
-                  ? 'w-8 bg-white shadow-lg'
-                  : 'w-2 bg-white/50 hover:bg-white/75'
+                  ? 'w-6 bg-white shadow-lg'
+                  : 'w-1.5 bg-white/50 hover:bg-white/75'
               }`}
-              aria-label={`Go to slide ${index + 1}`}
+              aria-label={`Ir a imagen ${index + 1}`}
             />
           ))}
         </div>

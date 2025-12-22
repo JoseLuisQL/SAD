@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, Loader2, ShieldAlert } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ShieldAlert, User, Lock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,8 +17,14 @@ import { ROUTES } from '@/lib/constants';
 import AuthHelper from './AuthHelper';
 
 const loginSchema = z.object({
-  username: z.string().min(3, 'Mínimo 3 caracteres'),
-  password: z.string().min(8, 'Mínimo 8 caracteres'),
+  username: z
+    .string()
+    .min(1, 'Ingrese su nombre de usuario')
+    .min(3, 'El usuario debe tener al menos 3 caracteres'),
+  password: z
+    .string()
+    .min(1, 'Ingrese su contraseña')
+    .min(8, 'La contraseña debe tener al menos 8 caracteres'),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -28,6 +34,7 @@ export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [countdown, setCountdown] = useState<number>(0);
+  const [hasError, setHasError] = useState(false);
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
   const securityStatus = useAuthStore((state) => state.securityStatus);
@@ -105,8 +112,9 @@ export default function LoginForm() {
         }
       }
       
-      toast.success('¡Bienvenido al sistema!', {
-        description: 'Inicio de sesión exitoso'
+      toast.success('¡Bienvenido!', {
+        description: 'Redirigiendo al sistema...',
+        duration: 2000,
       });
       router.push(ROUTES.DASHBOARD);
     } catch (error: any) {
@@ -135,13 +143,15 @@ export default function LoginForm() {
       }
       // Generic error
       else {
-        const errorMessage = error instanceof Error ? error.message : 'Error al iniciar sesión. Por favor, intente nuevamente.';
-        toast.error('Error de Autenticación', {
+        const errorMessage = error instanceof Error ? error.message : 'Verifica tus credenciales e intenta nuevamente';
+        toast.error('No se pudo iniciar sesión', {
           description: errorMessage,
-          duration: 5000,
+          duration: 4000,
         });
       }
       
+      setHasError(true);
+      setTimeout(() => setHasError(false), 500);
       await fetchSecurityStatus();
     } finally {
       setIsLoading(false);
@@ -162,47 +172,60 @@ export default function LoginForm() {
 
   return (
     <form 
+      id="login-form"
       onSubmit={handleSubmit(onSubmit)} 
-      className="space-y-6"
+      className={`space-y-5 ${hasError ? 'animate-shake' : ''}`}
       role="form"
       aria-label="Formulario de inicio de sesión"
     >
-      <div className="space-y-3">
+      {/* Live region para lectores de pantalla */}
+      <div role="status" aria-live="polite" className="sr-only">
+        {errors.username && `Error en usuario: ${errors.username.message}`}
+        {errors.password && `Error en contraseña: ${errors.password.message}`}
+      </div>
+
+      <div className="space-y-2">
         <Label 
           htmlFor="username" 
-          className="text-sm font-semibold text-gray-900 dark:text-white"
+          className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"
         >
+          <User className="h-4 w-4 text-gray-400 dark:text-gray-500" />
           Usuario
         </Label>
         <Input
           id="username"
           type="text"
-          placeholder="Ingrese su usuario"
+          placeholder="Ingrese su nombre de usuario"
+          autoComplete="username"
+          autoFocus
           disabled={isLoading || isLocked}
-          aria-describedby="username-help"
+          aria-describedby={errors.username ? "username-error" : "username-help"}
           aria-invalid={!!errors.username}
           {...register('username')}
-          className="h-11 border-gray-300 dark:border-slate-700 focus:border-gray-900 dark:focus:border-slate-400 focus:ring-gray-900 dark:focus:ring-slate-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-slate-500"
+          className="h-12 border-gray-200 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-slate-500 rounded-lg"
         />
         <p id="username-help" className="sr-only">
           Ingrese su nombre de usuario del sistema
         </p>
         {errors.username && (
           <p 
-            className="text-sm text-red-600 dark:text-red-400 font-semibold" 
+            id="username-error"
+            className="text-xs text-red-500 dark:text-red-400 flex items-center gap-1" 
             role="alert"
             aria-live="assertive"
           >
+            <AlertCircle className="h-3 w-3" />
             {errors.username.message}
           </p>
         )}
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         <Label 
           htmlFor="password" 
-          className="text-sm font-semibold text-gray-900 dark:text-white"
+          className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"
         >
+          <Lock className="h-4 w-4 text-gray-400 dark:text-gray-500" />
           Contraseña
         </Label>
         <div className="relative">
@@ -210,26 +233,27 @@ export default function LoginForm() {
             id="password"
             type={showPassword ? 'text' : 'password'}
             placeholder="Ingrese su contraseña"
+            autoComplete="current-password"
             disabled={isLoading || isLocked}
-            aria-describedby="password-help"
+            aria-describedby={errors.password ? "password-error" : "password-help"}
             aria-invalid={!!errors.password}
             {...register('password')}
-            className="h-11 pr-11 border-gray-300 dark:border-slate-700 focus:border-gray-900 dark:focus:border-slate-400 focus:ring-gray-900 dark:focus:ring-slate-400 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-slate-500"
+            className="h-12 pr-12 border-gray-200 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-slate-500 rounded-lg"
           />
           <Button
             type="button"
             variant="ghost"
-            size="icon-sm"
+            size="icon"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-1 top-1/2 -translate-y-1/2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300"
+            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-md transition-colors"
             disabled={isLoading || isLocked}
             aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-            aria-pressed={showPassword}
+            tabIndex={-1}
           >
             {showPassword ? (
-              <EyeOff className="h-5 w-5" />
+              <EyeOff className="h-4 w-4" />
             ) : (
-              <Eye className="h-5 w-5" />
+              <Eye className="h-4 w-4" />
             )}
           </Button>
         </div>
@@ -238,37 +262,23 @@ export default function LoginForm() {
         </p>
         {errors.password && (
           <p 
-            className="text-sm text-red-600 dark:text-red-400 font-semibold"
+            id="password-error"
+            className="text-xs text-red-500 dark:text-red-400 flex items-center gap-1"
             role="alert"
             aria-live="assertive"
           >
+            <AlertCircle className="h-3 w-3" />
             {errors.password.message}
           </p>
         )}
       </div>
 
-      <div className="flex items-center space-x-2 pt-2">
-        <Checkbox
-          id="remember-me"
-          checked={rememberMe}
-          onCheckedChange={handleRememberMeChange}
-          disabled={isLoading || isLocked}
-          aria-label="Recordar mi sesión"
-        />
-        <Label
-          htmlFor="remember-me"
-          className="text-sm font-medium text-gray-800 dark:text-slate-200 cursor-pointer select-none"
-        >
-          Recordar mi sesión
-        </Label>
-      </div>
-
       {isLocked && countdown > 0 && (
-        <Alert variant="destructive" className="border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/50">
+        <Alert variant="destructive" className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/50">
           <ShieldAlert className="h-4 w-4 text-red-600 dark:text-red-400" />
           <AlertDescription className="text-red-900 dark:text-red-200">
-            <strong className="font-bold">Cuenta bloqueada temporalmente</strong>
-            <p className="mt-1 text-sm font-medium">
+            <strong className="font-semibold">Cuenta bloqueada temporalmente</strong>
+            <p className="mt-1 text-sm">
               Por seguridad, tu cuenta ha sido bloqueada debido a múltiples intentos fallidos.
             </p>
             <p className="mt-2 font-mono text-lg font-bold">
@@ -281,20 +291,40 @@ export default function LoginForm() {
       <div className="pt-2">
         <Button 
           type="submit" 
-          className="w-full h-11 text-base font-medium" 
+          className="w-full h-12 text-base font-semibold bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-200 disabled:opacity-50 disabled:shadow-none" 
           disabled={isLoading || isLocked}
         >
           {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Iniciando sesión...
-            </>
+            <span className="flex items-center justify-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Verificando...
+            </span>
           ) : isLocked ? (
-            'Cuenta Bloqueada'
+            <span className="flex items-center justify-center gap-2">
+              <ShieldAlert className="h-5 w-5" />
+              Cuenta Bloqueada
+            </span>
           ) : (
             'Iniciar Sesión'
           )}
         </Button>
+      </div>
+
+      <div className="flex items-center justify-center gap-2 pt-1">
+        <Checkbox
+          id="remember-me"
+          checked={rememberMe}
+          onCheckedChange={handleRememberMeChange}
+          disabled={isLoading || isLocked}
+          className="h-4 w-4 border-gray-300 dark:border-slate-600"
+          aria-label="Recordar mi usuario"
+        />
+        <Label
+          htmlFor="remember-me"
+          className="text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none"
+        >
+          Recordar mi usuario
+        </Label>
       </div>
 
       <AuthHelper />
