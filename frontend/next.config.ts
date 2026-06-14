@@ -29,6 +29,12 @@ const nextConfig: NextConfig = {
         port: '4000',
         pathname: '/api/**',
       },
+      {
+        protocol: 'http',
+        hostname: '192.168.18.21',
+        port: '5001',
+        pathname: '/api/**',
+      },
       // Producción
       {
         protocol: 'http',

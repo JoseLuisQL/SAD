@@ -68,15 +68,44 @@ const formatConfigDTO = (config: any, baseUrl: string): SystemConfigDTO => {
   const loginBackgrounds: string[] = [];
   
   for (let i = 1; i <= 5; i++) {
-    // Priorizar URL externa sobre archivo local
     const bgUrl = config[`loginBg${i}Url`];
     const bgPath = config[`loginBg${i}FilePath`];
     
-    if (bgUrl) {
-      loginBackgrounds.push(bgUrl);
-    } else if (bgPath) {
+    // Para archivos locales, SIEMPRE regenerar la URL usando el baseUrl actual
+    // Esto evita problemas cuando el servidor se accede desde diferentes IPs
+    if (bgPath) {
       loginBackgrounds.push(`${baseUrl}/api/configuration/assets/${path.basename(bgPath)}`);
+    } else if (bgUrl) {
+      loginBackgrounds.push(bgUrl);
     }
+  }
+
+  // Determinar si tiene archivo local (independiente de si logoUrl tiene valor)
+  const hasLocalLogo = !!config.logoFilePath;
+  const hasLocalFavicon = !!config.faviconFilePath;
+  const hasLocalStamp = !!config.stampFilePath;
+
+  // Para archivos locales, SIEMPRE regenerar la URL usando el baseUrl actual
+  // Esto evita problemas cuando el servidor se accede desde diferentes IPs
+  let finalLogoUrl: string | null = null;
+  if (hasLocalLogo) {
+    finalLogoUrl = `${baseUrl}/api/configuration/assets/${path.basename(config.logoFilePath)}`;
+  } else if (config.logoUrl) {
+    finalLogoUrl = config.logoUrl;
+  }
+
+  let finalFaviconUrl: string | null = null;
+  if (hasLocalFavicon) {
+    finalFaviconUrl = `${baseUrl}/api/configuration/assets/${path.basename(config.faviconFilePath)}`;
+  } else if (config.faviconUrl) {
+    finalFaviconUrl = config.faviconUrl;
+  }
+
+  let finalStampUrl: string | null = null;
+  if (hasLocalStamp) {
+    finalStampUrl = `${baseUrl}/api/configuration/assets/${path.basename(config.stampFilePath)}`;
+  } else if (config.stampUrl) {
+    finalStampUrl = config.stampUrl;
   }
 
   return {
@@ -89,18 +118,16 @@ const formatConfigDTO = (config: any, baseUrl: string): SystemConfigDTO => {
     websiteUrl: config.websiteUrl,
     primaryColor: config.primaryColor,
     accentColor: config.accentColor,
-    // Priorizar URL externa sobre archivo local
-    logoUrl: config.logoUrl || (config.logoFilePath ? `${baseUrl}/api/configuration/assets/${path.basename(config.logoFilePath)}` : null),
-    faviconUrl: config.faviconUrl || (config.faviconFilePath ? `${baseUrl}/api/configuration/assets/${path.basename(config.faviconFilePath)}` : null),
-    stampUrl: config.stampUrl || (config.stampFilePath ? `${baseUrl}/api/configuration/assets/${path.basename(config.stampFilePath)}` : null),
+    logoUrl: finalLogoUrl,
+    faviconUrl: finalFaviconUrl,
+    stampUrl: finalStampUrl,
     loginBackgrounds,
     signatureStampEnabled: config.signatureStampEnabled,
     maintenanceMode: config.maintenanceMode,
     updatedAt: config.updatedAt,
-    // Flags: tiene archivo local solo si NO tiene URL externa y SÍ tiene archivo
-    hasLocalLogo: !config.logoUrl && !!config.logoFilePath,
-    hasLocalFavicon: !config.faviconUrl && !!config.faviconFilePath,
-    hasLocalStamp: !config.stampUrl && !!config.stampFilePath
+    hasLocalLogo,
+    hasLocalFavicon,
+    hasLocalStamp
   };
 };
 
