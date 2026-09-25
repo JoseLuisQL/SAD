@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Cookies from 'js-cookie';
-import { STORAGE_KEYS } from '@/lib/constants';
+import { STORAGE_KEYS, API_URL } from '@/lib/constants';
 
 export interface Notification {
   id: string;
@@ -90,7 +90,7 @@ export function useNotifications() {
       }
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/notifications?${queryParams.toString()}`,
+        `${API_URL}/notifications?${queryParams.toString()}`,
         {
           credentials: 'include',
           headers: {
@@ -135,7 +135,7 @@ export function useNotifications() {
       }
       
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/notifications/unread-count`,
+        `${API_URL}/notifications/unread-count`,
         {
           credentials: 'include',
           headers: {
@@ -169,7 +169,7 @@ export function useNotifications() {
       if (!token) return;
       
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/notifications/${id}/read`,
+        `${API_URL}/notifications/${id}/read`,
         {
           method: 'PUT',
           credentials: 'include',
@@ -203,7 +203,7 @@ export function useNotifications() {
       if (!token) return;
       
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/notifications/read-all`,
+        `${API_URL}/notifications/read-all`,
         {
           method: 'PUT',
           credentials: 'include',
@@ -235,7 +235,7 @@ export function useNotifications() {
       if (!token) return;
       
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/notifications/${id}`,
+        `${API_URL}/notifications/${id}`,
         {
           method: 'DELETE',
           credentials: 'include',

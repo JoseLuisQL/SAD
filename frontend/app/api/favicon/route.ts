@@ -6,8 +6,9 @@ export const revalidate = 0;
 export async function GET(request: NextRequest) {
   try {
     // Fetch configuration from backend
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-    const configResponse = await fetch(`${backendUrl}/api/configuration`, {
+    const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+    const apiUrl = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
+    const configResponse = await fetch(`${apiUrl}/configuration`, {
       cache: 'no-store',
       headers: {
         'Cache-Control': 'no-cache',
