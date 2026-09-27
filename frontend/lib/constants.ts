@@ -1,4 +1,7 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+export const API_URL =
+  typeof window !== 'undefined'
+    ? `${window.location.protocol}//${window.location.hostname}:5001/api`
+    : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
 
 export const API_ENDPOINTS = {
   AUTH: {

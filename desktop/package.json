@@ -12,9 +12,9 @@
   "scripts": {
     "start": "electron .",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder --win nsis -c.publish=never",
-    "dist:portable": "electron-builder --win portable -c.publish=never",
-    "dist:all": "electron-builder --win nsis portable -c.publish=never"
+    "dist": "electron-builder --win nsis --publish never",
+    "dist:portable": "electron-builder --win portable --publish never",
+    "dist:all": "electron-builder --win nsis portable --publish never"
   },
   "build": {
     "appId": "pe.gob.disachincheros.sad",
