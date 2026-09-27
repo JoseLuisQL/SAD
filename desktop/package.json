@@ -5,12 +5,16 @@
   "main": "src/main.js",
   "author": "DISA Chincheros - Área de Informática y Archivo Central",
   "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JoseLuisQL/SAD.git"
+  },
   "scripts": {
     "start": "electron .",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder --win nsis",
-    "dist:portable": "electron-builder --win portable",
-    "dist:all": "electron-builder --win nsis portable"
+    "dist": "electron-builder --win nsis -c.publish=never",
+    "dist:portable": "electron-builder --win portable -c.publish=never",
+    "dist:all": "electron-builder --win nsis portable -c.publish=never"
   },
   "build": {
     "appId": "pe.gob.disachincheros.sad",
