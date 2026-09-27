@@ -1,0 +1,80 @@
+{
+  "name": "sad-desktop",
+  "version": "1.0.0",
+  "description": "Sistema Integrado de Archivos Digitales (SAD) - Aplicación de Escritorio Oficial DISA Chincheros",
+  "main": "src/main.js",
+  "author": "DISA Chincheros - Área de Informática y Archivo Central",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --win nsis",
+    "dist:portable": "electron-builder --win portable",
+    "dist:all": "electron-builder --win nsis portable"
+  },
+  "build": {
+    "appId": "pe.gob.disachincheros.sad",
+    "productName": "SAD - Archivo Digital",
+    "copyright": "Copyright © 2026 DISA Chincheros",
+    "directories": {
+      "output": "dist-installer"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../backend",
+        "to": "backend",
+        "filter": [
+          "dist/**/*",
+          "prisma/**/*",
+          "node_modules/**/*",
+          ".env",
+          ".env.production",
+          "package.json",
+          "*.traineddata"
+        ]
+      },
+      {
+        "from": "../frontend/.next/standalone",
+        "to": "frontend",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SAD - Archivo Digital",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
+    },
+    "portable": {
+      "artifactName": "SAD-Escritorio-Portable-v${version}.${ext}"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  }
+}

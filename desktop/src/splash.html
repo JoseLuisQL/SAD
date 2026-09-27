@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Iniciando SAD - DISA Chincheros</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #f8fafc;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-app-region: drag;
+      overflow: hidden;
+      border: 1px solid #334155;
+      border-radius: 12px;
+    }
+    .logo-container {
+      width: 90px;
+      height: 90px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+    .logo-container img {
+      max-width: 60px;
+      max-height: 60px;
+      object-fit: contain;
+    }
+    h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+    .subtitle {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 24px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .progress-bar-container {
+      width: 280px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #06b6d4);
+      border-radius: 6px;
+      animation: indeterminate 1.8s infinite ease-in-out;
+      transform-origin: 0% 50%;
+    }
+    @keyframes indeterminate {
+      0% {
+        transform: translateX(-100%) scaleX(0.2);
+      }
+      50% {
+        transform: translateX(0%) scaleX(0.7);
+      }
+      100% {
+        transform: translateX(100%) scaleX(0.2);
+      }
+    }
+    .status-text {
+      font-size: 12px;
+      color: #38bdf8;
+      font-weight: 500;
+    }
+    .normative-badge {
+      margin-top: 22px;
+      font-size: 10px;
+      color: #64748b;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="logo-container">
+    <img src="../assets/logo.png" alt="SAD Logo" onerror="this.style.display='none'; this.parentNode.innerHTML='<div style=\'font-size:32px;font-weight:bold;color:#38bdf8;\'>SAD</div>'">
+  </div>
+  <h1>Sistema Integrado de Archivos Digitales</h1>
+  <div class="subtitle">DISA Chincheros — Estación Central</div>
+
+  <div class="progress-bar-container">
+    <div class="progress-bar"></div>
+  </div>
+
+  <div class="status-text" id="statusMessage">Iniciando servicios locales y base de datos...</div>
+
+  <div class="normative-badge">
+    Conforme a Directiva N° 001-2023-AGN / Ley N° 27269 Firma Digital
+  </div>
+
+  <script>
+    const messages = [
+      'Verificando repositorio documental local...',
+      'Iniciando motor de base de datos MySQL...',
+      'Iniciando servicio de API y trazabilidad de folios...',
+      'Conectando componente local de Firma Perú (puerto 48596)...',
+      'Cargando interfaz de Archivo Digital...'
+    ];
+    let i = 0;
+    setInterval(() => {
+      i = (i + 1) % messages.length;
+      document.getElementById('statusMessage').textContent = messages[i];
+    }, 1800);
+  </script>
+</body>
+</html>

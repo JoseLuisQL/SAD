@@ -62,6 +62,8 @@ dist/
 build/
 .next/
 out/
+dist-installer/
+desktop/dist-installer/
 
 # Dependency directories
 jspm_packages/
