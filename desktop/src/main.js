@@ -100,7 +100,55 @@ function ensureDatabaseService() {
 
       updateSplashStatus('Iniciando servicio local de base de datos MySQL...');
       exec('sc start wampmysqld64 || sc start wampmariadb64 || sc start MySQL80 || sc start mysql', { timeout: 4000 }, () => {
-        setTimeout(resolve, 1500);
+        // Verificar si el servicio inició correctamente
+        exec('netstat -ano | findstr /R ":3306 "', { timeout: 2000 }, (_e, stdout2) => {
+          if (stdout2 && stdout2.trim().length > 0) {
+            return resolve();
+          }
+
+          // Fallback: Si sc start falló por falta de permisos de admin, buscar y lanzar mysqld directamente
+          try {
+            const fs = require('fs');
+            const wampBase = 'C:\\wamp64\\bin\\mysql';
+            let mysqldPath = null;
+            let myIniPath = null;
+
+            if (fs.existsSync(wampBase)) {
+              const versions = fs.readdirSync(wampBase).filter((f) => f.startsWith('mysql'));
+              for (const v of versions) {
+                const exe = path.join(wampBase, v, 'bin', 'mysqld.exe');
+                const ini = path.join(wampBase, v, 'my.ini');
+                if (fs.existsSync(exe)) {
+                  mysqldPath = exe;
+                  if (fs.existsSync(ini)) myIniPath = ini;
+                  break;
+                }
+              }
+            } else if (fs.existsSync('C:\\xampp\\mysql\\bin\\mysqld.exe')) {
+              mysqldPath = 'C:\\xampp\\mysql\\bin\\mysqld.exe';
+              if (fs.existsSync('C:\\xampp\\mysql\\bin\\my.ini')) {
+                myIniPath = 'C:\\xampp\\mysql\\bin\\my.ini';
+              }
+            }
+
+            if (mysqldPath) {
+              writeLog('system.log', `Iniciando mysqld directamente vía fallback: ${mysqldPath}`);
+              const args = myIniPath ? [`--defaults-file=${myIniPath}`] : [];
+              const dbProc = spawn(mysqldPath, args, {
+                detached: true,
+                stdio: 'ignore',
+                windowsHide: true
+              });
+              dbProc.unref();
+              setTimeout(resolve, 2000);
+              return;
+            }
+          } catch (spawnErr) {
+            writeLog('system.log', `Error al intentar fallback de MySQL: ${spawnErr.message}`);
+          }
+
+          setTimeout(resolve, 1500);
+        });
       });
     });
   });
