@@ -300,6 +300,9 @@ function createMainWindow() {
     mainWindow.maximize();
     mainWindow.show();
     mainWindow.focus();
+
+    // Inicializar el servicio de actualización automática
+    setupAutoUpdater();
   });
 
   mainWindow.on('close', (e) => {
@@ -327,7 +330,106 @@ function createMainWindow() {
   });
 }
 
-// 11. Controladores IPC
+// 11. Controladores IPC y Actualizador Automático (AutoUpdater)
+let autoUpdaterInstance = null;
+let currentUpdateInfo = null;
+
+function notifyRendererUpdater(payload) {
+  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
+    mainWindow.webContents.send('updater:status', payload);
+  }
+}
+
+function setupAutoUpdater() {
+  let autoUpdaterModule = null;
+  try {
+    const { autoUpdater } = require('electron-updater');
+    autoUpdaterModule = autoUpdater;
+    autoUpdaterInstance = autoUpdater;
+  } catch (err) {
+    writeLog('updater.log', `electron-updater no disponible en este entorno: ${err.message}`);
+    return;
+  }
+
+  autoUpdaterModule.autoDownload = false;
+  autoUpdaterModule.autoInstallOnAppQuit = true;
+  autoUpdaterModule.allowPrerelease = false;
+
+  autoUpdaterModule.logger = {
+    info: (msg) => writeLog('updater.log', `[INFO] ${msg}`),
+    warn: (msg) => writeLog('updater.log', `[WARN] ${msg}`),
+    error: (msg) => writeLog('updater.log', `[ERROR] ${msg}`)
+  };
+
+  autoUpdaterModule.on('checking-for-update', () => {
+    writeLog('updater.log', 'Buscando nuevas actualizaciones en GitHub Releases...');
+    notifyRendererUpdater({ status: 'checking' });
+  });
+
+  autoUpdaterModule.on('update-available', (info) => {
+    writeLog('updater.log', `Nueva versión disponible encontrada: ${info.version}`);
+    currentUpdateInfo = info;
+    notifyRendererUpdater({
+      status: 'available',
+      info: {
+        version: info.version,
+        releaseDate: info.releaseDate,
+        releaseNotes: info.releaseNotes,
+        releaseName: info.releaseName
+      }
+    });
+  });
+
+  autoUpdaterModule.on('update-not-available', (info) => {
+    const currentVer = app.getVersion();
+    writeLog('updater.log', `El sistema está al día con la última versión (${info?.version || currentVer})`);
+    notifyRendererUpdater({
+      status: 'not-available',
+      info: {
+        version: info?.version || currentVer
+      }
+    });
+  });
+
+  autoUpdaterModule.on('error', (err) => {
+    const errText = err ? (err.message || String(err)) : 'Error desconocido al comprobar actualizaciones';
+    writeLog('updater.log', `Error durante comprobación o descarga: ${errText}`);
+    notifyRendererUpdater({
+      status: 'error',
+      error: errText
+    });
+  });
+
+  autoUpdaterModule.on('download-progress', (progressObj) => {
+    notifyRendererUpdater({
+      status: 'downloading',
+      info: currentUpdateInfo ? {
+        version: currentUpdateInfo.version,
+        releaseDate: currentUpdateInfo.releaseDate,
+        releaseNotes: currentUpdateInfo.releaseNotes
+      } : null,
+      progress: {
+        percent: Math.round(progressObj.percent || 0),
+        bytesPerSecond: progressObj.bytesPerSecond || 0,
+        total: progressObj.total || 0,
+        transferred: progressObj.transferred || 0
+      }
+    });
+  });
+
+  autoUpdaterModule.on('update-downloaded', (info) => {
+    writeLog('updater.log', `Paquete de actualización v${info.version} descargado y listo para instalar.`);
+    notifyRendererUpdater({
+      status: 'downloaded',
+      info: {
+        version: info.version,
+        releaseDate: info.releaseDate,
+        releaseNotes: info.releaseNotes
+      }
+    });
+  });
+}
+
 ipcMain.on('app:close', () => {
   if (mainWindow) mainWindow.close();
 });
@@ -342,6 +444,90 @@ ipcMain.on('app:maximize', () => {
       mainWindow.maximize();
     }
   }
+});
+
+// IPC Handlers de Actualización
+ipcMain.handle('updater:get-app-info', () => {
+  return {
+    isDesktop: true,
+    appVersion: app.getVersion(),
+    platform: process.platform,
+    arch: process.arch,
+    isPackaged: app.isPackaged
+  };
+});
+
+ipcMain.handle('updater:check', async () => {
+  writeLog('updater.log', 'Petición de usuario: Buscar actualizaciones...');
+  if (!autoUpdaterInstance) {
+    // Si electron-updater no está en node_modules o es modo dev sin empaquetar
+    if (!app.isPackaged) {
+      return {
+        status: 'not-available',
+        info: {
+          version: app.getVersion() + ' (Modo Desarrollo)'
+        }
+      };
+    }
+    return {
+      status: 'error',
+      error: 'El servicio de actualización automática no está disponible en este entorno.'
+    };
+  }
+
+  try {
+    const result = await autoUpdaterInstance.checkForUpdates();
+    return {
+      status: 'checking',
+      updateCheckResult: result ? result.updateInfo : null
+    };
+  } catch (err) {
+    writeLog('updater.log', `Error al buscar actualizaciones: ${err.message}`);
+    return {
+      status: 'error',
+      error: err.message || 'No se pudo conectar con el servidor de actualizaciones en GitHub.'
+    };
+  }
+});
+
+ipcMain.handle('updater:download', async () => {
+  writeLog('updater.log', 'Petición de usuario: Descargar actualización...');
+  if (!autoUpdaterInstance) {
+    throw new Error('El actualizador no se encuentra inicializado.');
+  }
+  try {
+    await autoUpdaterInstance.downloadUpdate();
+    return { success: true };
+  } catch (err) {
+    writeLog('updater.log', `Error al descargar paquete: ${err.message}`);
+    throw err;
+  }
+});
+
+ipcMain.handle('updater:install', async () => {
+  writeLog('updater.log', 'Petición de usuario: Reiniciar e instalar actualización...');
+  if (!autoUpdaterInstance) {
+    throw new Error('El actualizador no se encuentra inicializado.');
+  }
+
+  isQuitting = true;
+
+  // 1. Detener procesos locales de Backend y Frontend para desbloquear archivos en Windows
+  killProcessTreeSync(backendProcess);
+  killProcessTreeSync(frontendProcess);
+
+  // 2. Liberar puertos
+  freePortSync(BACKEND_PORT);
+  freePortSync(FRONTEND_PORT);
+
+  writeLog('updater.log', 'Subprocesos detenidos y puertos liberados. Ejecutando quitAndInstall...');
+
+  // 3. Ejecutar el instalador y reiniciar
+  setTimeout(() => {
+    autoUpdaterInstance.quitAndInstall(false, true);
+  }, 400);
+
+  return { success: true };
 });
 
 // 12. Cierre y limpieza síncrona
