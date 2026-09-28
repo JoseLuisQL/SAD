@@ -1,11 +1,12 @@
 'use client';
 
-import { Building2, Palette, Settings } from 'lucide-react';
+import { Building2, Palette, Settings, Sparkles } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SystemConfig } from '@/types/configuration.types';
 import { GeneralInfoTab } from './GeneralInfoTab';
 import { BrandingTab } from './BrandingTab';
 import { SystemPreferencesTab } from './SystemPreferencesTab';
+import { SystemUpdatesTab } from './SystemUpdatesTab';
 import { ConfigurationFormProps, AssetType } from './configuration.types';
 
 interface ConfigurationTabsProps extends ConfigurationFormProps {
@@ -33,10 +34,10 @@ export function ConfigurationTabs({
 }: ConfigurationTabsProps) {
   return (
     <Tabs defaultValue="general" className="w-full">
-      <TabsList className="grid w-full grid-cols-3 h-12 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
+      <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto sm:h-12 p-1 gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
         <TabsTrigger
           value="general"
-          className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm rounded-md transition-all"
+          className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm rounded-md transition-all py-2 sm:py-0"
         >
           <Building2 className="w-4 h-4" />
           <span className="hidden sm:inline">Informacion General</span>
@@ -44,7 +45,7 @@ export function ConfigurationTabs({
         </TabsTrigger>
         <TabsTrigger
           value="branding"
-          className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm rounded-md transition-all"
+          className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm rounded-md transition-all py-2 sm:py-0"
         >
           <Palette className="w-4 h-4" />
           <span className="hidden sm:inline">Branding</span>
@@ -52,11 +53,19 @@ export function ConfigurationTabs({
         </TabsTrigger>
         <TabsTrigger
           value="system"
-          className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm rounded-md transition-all"
+          className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm rounded-md transition-all py-2 sm:py-0"
         >
           <Settings className="w-4 h-4" />
           <span className="hidden sm:inline">Sistema</span>
           <span className="sm:hidden">Sistema</span>
+        </TabsTrigger>
+        <TabsTrigger
+          value="updates"
+          className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm rounded-md transition-all py-2 sm:py-0"
+        >
+          <Sparkles className="w-4 h-4 text-blue-500" />
+          <span className="hidden sm:inline">Actualizaciones</span>
+          <span className="sm:hidden">Actualizar</span>
         </TabsTrigger>
       </TabsList>
 
@@ -87,6 +96,10 @@ export function ConfigurationTabs({
           watch={watch}
           setValue={setValue}
         />
+      </TabsContent>
+
+      <TabsContent value="updates" className="mt-6">
+        <SystemUpdatesTab />
       </TabsContent>
     </Tabs>
   );
