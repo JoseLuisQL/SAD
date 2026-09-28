@@ -23,6 +23,13 @@
     "directories": {
       "output": "dist-installer"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "JoseLuisQL",
+        "repo": "SAD"
+      }
+    ],
     "files": [
       "src/**/*",
       "assets/**/*"
@@ -76,6 +83,9 @@
     "portable": {
       "artifactName": "SAD-Escritorio-Portable-v${version}.${ext}"
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
   },
   "devDependencies": {
     "electron": "^33.2.1",

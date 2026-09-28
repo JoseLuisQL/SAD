@@ -79,5 +79,6 @@ jobs:
           files: |
             desktop/dist-installer/*.exe
             desktop/dist-installer/*.blockmap
+            desktop/dist-installer/latest.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

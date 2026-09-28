@@ -121,3 +121,23 @@ Se disponen de dos métodos para generar el instalador distribuible:
    npm run dist
    ```
 2. El instalador ejecutable `.exe` y la versión portable se crearán en `desktop/dist-installer/`.
+
+---
+
+## 6. SISTEMA DE ACTUALIZACIÓN AUTOMÁTICA EN LÍNEA (AUTO-UPDATER)
+
+El sistema SAD incorpora un mecanismo profesional de auto-actualización que permite a los usuarios del Archivo Central y administradores mantener el software al día sin necesidad de reinstalaciones manuales complejas:
+
+### 6.1 Cómo Buscar y Aplicar Actualizaciones desde el Sistema:
+1. Ingrese al sistema y diríjase al módulo de **Configuración** (`/dashboard/configuracion`).
+2. Haga clic en la pestaña **"Actualizaciones"** (identificada con el icono de destellos).
+3. Presione el botón **"Buscar Actualizaciones"**. El sistema consultará el canal oficial de la DISA Chincheros en GitHub Releases.
+4. Si existe una nueva versión:
+   - Se presentará un panel con el número de versión (`v1.X.X`), fecha de lanzamiento y la lista detallada de **Novedades y Mejoras**.
+   - Haga clic en **"Descargar e Instalar"**. Se mostrará una barra de progreso en tiempo real con el porcentaje, velocidad de descarga y tamaño transferido.
+   - Una vez finalizada la descarga, presione **"Reiniciar y Actualizar Ahora"**.
+5. El sistema cerrará de forma segura los servicios locales (liberando los puertos 3000 y 5001) y el instalador aplicará la nueva versión automáticamente en pocos segundos, reabriendo SAD con todos sus documentos, expedientes y base de datos intactos.
+
+### 6.2 Integridad y Seguridad Normativa:
+* **Firma Criptográfica SHA-512 (`latest.yml`):** Cada versión publicada genera un resumen hash inmutable. Si el archivo descargado no coincide con el hash original, la actualización se rechaza automáticamente para proteger la estación de trabajo institucional.
+* **Preservación Documental:** Los repositorios locales de documentos (`backend/uploads/documents/`) y la base de datos MySQL local nunca son sobreescritos durante la actualización.
